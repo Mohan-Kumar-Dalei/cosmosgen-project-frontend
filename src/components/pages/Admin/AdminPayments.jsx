@@ -33,7 +33,7 @@ const STATUS_LABELS = {
 
 const AdminPayments = () => {
     const { hasPermission } = useAdminAuth();
-    const { refreshCounts } = useAdminData();
+    const { refreshCounts, globalRefreshTrigger } = useAdminData();
     const [tab, setTab] = useState("collected");
     const [payments, setPayments] = useState([]);
     const [summary, setSummary] = useState({});
@@ -56,7 +56,6 @@ const AdminPayments = () => {
             });
             setPayments(res.data.data);
             setSummary(res.data.summary || {});
-            setSummary(res.data.summary || {});
             setAwaitingReconcile(res.data.awaitingReconcile || 0);
             setError("");
         } catch (err) {
@@ -70,7 +69,7 @@ const AdminPayments = () => {
     useEffect(() => {
         setLoading(true);
         load(tab);
-    }, [tab, load]);
+    }, [tab, load, globalRefreshTrigger]);
 
     useEffect(() => {
         const interval = setInterval(() => load(tab), 30000);

@@ -18,13 +18,19 @@ export const AdminDataProvider = ({ children }) => {
         scheduled: 0,
         active: 0,
         toVerify: 0,
+        wallets: 0,
     });
+    const [globalRefreshTrigger, setGlobalRefreshTrigger] = useState(0);
 
     const refreshCounts = useCallback(async () => {
         // Fetching before a session exists returns 401, and the axios
         // interceptor redirects on 401 - which bounced the admin straight
         // back to the login page the moment they signed in
         if (!admin) return;
+
+        // Any socket event that triggers refreshCounts will also bump this
+        // number, which pages can listen to for auto-refreshing their data
+        setGlobalRefreshTrigger((prev) => prev + 1);
 
         try {
             const res = await api.get("/admin/dashboard/stats");
@@ -34,7 +40,8 @@ export const AdminDataProvider = ({ children }) => {
                 rejected: t.rejected || 0,
                 scheduled: t.scheduled || 0,
                 active: (t.assigned || 0) + (t.inProgress || 0),
-                toVerify: res.data.data.unverifiedCash?.count || 0,
+                toVerify: res.data.data.awaitingReconcile?.count || res.data.data.unverifiedCash?.count || 0,
+                wallets: res.data.data.cashWithTechnicians?.count || 0,
             });
         } catch {
             // Badge counts are decoration - never surface an error for them
@@ -51,7 +58,7 @@ export const AdminDataProvider = ({ children }) => {
     }, [admin, authLoading, refreshCounts]);
 
     return (
-        <AdminDataContext.Provider value={{ counts, refreshCounts }}>
+        <AdminDataContext.Provider value={{ counts, refreshCounts, globalRefreshTrigger }}>
             {children}
         </AdminDataContext.Provider>
     );
@@ -60,5 +67,5 @@ export const AdminDataProvider = ({ children }) => {
 export const useAdminData = () => {
     const ctx = useContext(AdminDataContext);
     // Pages outside the provider shouldn't crash
-    return ctx || { counts: { pending: 0, toVerify: 0 }, refreshCounts: () => {} };
+    return ctx || { counts: { pending: 0, toVerify: 0 }, refreshCounts: () => {}, globalRefreshTrigger: 0 };
 };

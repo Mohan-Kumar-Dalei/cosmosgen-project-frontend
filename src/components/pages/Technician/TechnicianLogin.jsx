@@ -77,12 +77,15 @@ const TechnicianLogin = () => {
 
                 {/* Header / Logo - ONLY VISIBLE ON MOBILE */}
                 <div className="flex lg:hidden items-center gap-2 mb-8 mt-4">
-                    <div className="bg-green-700 p-1.5 rounded-lg">
-                        <Hexagon className="w-5 h-5 text-white fill-white" />
+                    <img 
+                        src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                        alt="Cosmosgen Logo" 
+                        className="h-8" 
+                    />
+                    <div className="flex flex-col">
+                        <span className="font-bold text-gray-900 text-lg tracking-tight leading-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Cosmosgen</span>
+                        <span className="text-[10px] text-gray-500 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
                     </div>
-                    <span className="font-bold text-gray-900 text-lg tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                        Cosmosgen Engineers
-                    </span>
                 </div>
 
                 {/* Form Container */}

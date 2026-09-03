@@ -28,6 +28,8 @@ const LIVE_STYLES = {
     offline: "bg-gray-100 text-gray-600",
 };
 
+import { useAdminData } from "./AdminDataContext";
+
 const LIVE_LABELS = { available: "Free", on_job: "On job", offline: "Offline" };
 
 const timeAgo = (dateStr) => {
@@ -39,6 +41,7 @@ const timeAgo = (dateStr) => {
 };
 
 const AdminTechnicians = () => {
+    const { globalRefreshTrigger } = useAdminData();
     const [view, setView] = useState("roster");
     const [status, setStatus] = useState("");
     const [search, setSearch] = useState("");
@@ -72,7 +75,7 @@ const AdminTechnicians = () => {
         setLoading(true);
         const timer = setTimeout(() => load(view, status, search), search ? 400 : 0);
         return () => clearTimeout(timer);
-    }, [view, status, search, load]);
+    }, [view, status, search, load, globalRefreshTrigger]);
 
     useEffect(() => {
         const interval = setInterval(() => load(view, status, search), 30000);
@@ -497,6 +500,35 @@ const TechnicianDetail = ({ technicianId, onClose, onChanged }) => {
                                 </div>
                             )}
 
+                            {/* Bank Details */}
+                            {tech.bankDetails?.ifsc ? (
+                                <div className="mb-5 border border-gray-200 rounded-xl overflow-hidden">
+                                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center gap-2">
+                                        <Banknote className="w-3.5 h-3.5 text-gray-500" />
+                                        <p className="text-xs font-bold text-gray-700 uppercase">Bank Details</p>
+                                    </div>
+                                    <div className="p-4 space-y-3 bg-white">
+                                        <BankRow label="Account holder" value={tech.bankDetails.accountHolderName} />
+                                        <BankRow label="Account number" value={tech.bankDetails.accountNumber || tech.bankDetails.accountLast4} mono />
+                                        <BankRow label="IFSC" value={tech.bankDetails.ifsc} mono />
+                                        {tech.bankDetails.bankName && (
+                                            <div className="pt-2 border-t border-gray-100">
+                                                <p className="text-xs text-gray-500 mb-0.5">Bank & Branch</p>
+                                                <p className="text-sm font-semibold text-gray-900">{tech.bankDetails.bankName}</p>
+                                                {tech.bankDetails.branch && (
+                                                    <p className="text-xs text-gray-500">{tech.bankDetails.branch}</p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2">
+                                    <Banknote className="w-4 h-4 text-amber-600 shrink-0" />
+                                    <p className="text-xs text-amber-800 font-medium">No bank details provided</p>
+                                </div>
+                            )}
+
                             {tech.activeTicket && (
                                 <div className="mb-5">
                                     <p className="text-xs font-bold text-gray-400 uppercase mb-2">Working on now</p>
@@ -699,6 +731,44 @@ const ReasonDialog = ({ title, body, placeholder, confirmLabel, minLength = 5, o
                         {confirmLabel}
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+/* ================================================================== */
+/* BANK ROW with Copy                                                   */
+/* ================================================================== */
+const BankRow = ({ label, value, mono }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        if (!value) return;
+        navigator.clipboard.writeText(value).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    return (
+        <div className="flex justify-between items-center gap-2">
+            <span className="text-xs text-gray-500 shrink-0">{label}</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+                <span className={"text-sm font-semibold text-gray-900 truncate " + (mono ? "font-mono" : "")}>
+                    {value || "—"}
+                </span>
+                {value && (
+                    <button
+                        onClick={handleCopy}
+                        title="Copy"
+                        className="shrink-0 text-gray-400 hover:text-green-700 transition-colors"
+                    >
+                        {copied
+                            ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                            : <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        }
+                    </button>
+                )}
             </div>
         </div>
     );

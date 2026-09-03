@@ -61,7 +61,7 @@ const AdminTickets = () => {
     const [error, setError] = useState("");
     const [selectedId, setSelectedId] = useState(null);
     const [flash, setFlash] = useState(null);
-    const { refreshCounts } = useAdminData();
+    const { refreshCounts, globalRefreshTrigger } = useAdminData();
 
     const loadTickets = useCallback(async (status) => {
         try {
@@ -79,7 +79,7 @@ const AdminTickets = () => {
     useEffect(() => {
         setLoading(true);
         loadTickets(tab);
-    }, [tab, loadTickets]);
+    }, [tab, loadTickets, globalRefreshTrigger]);
 
     useEffect(() => {
         // Auto-refresh so the queue is never stale

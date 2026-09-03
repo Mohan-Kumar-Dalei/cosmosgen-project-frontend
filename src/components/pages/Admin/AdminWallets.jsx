@@ -2,12 +2,14 @@ import React, { useEffect, useState, useCallback } from "react";
 import AdminLayout from "./AdminLayout";
 import { useAdminAuth } from "../Admin/adminAuthContext";
 import { api, getErrorMessage } from "../../services/api";
+import { useAdminData } from "./AdminDataContext";
 import {
     Loader2, AlertCircle, RefreshCw, X, Wallet, Phone,
     ArrowUpRight, ArrowDownLeft, CheckCircle2, MapPin,
 } from "lucide-react";
 
 const AdminWallets = () => {
+    const { globalRefreshTrigger } = useAdminData();
     const [rows, setRows] = useState([]);
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ const AdminWallets = () => {
         load();
         const interval = setInterval(load, 60000);
         return () => clearInterval(interval);
-    }, [load]);
+    }, [load, globalRefreshTrigger]);
 
     const handleDone = (message) => {
         setSelectedId(null);

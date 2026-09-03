@@ -15,6 +15,21 @@ const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Rewrite URL to include admin ID if missing
+    useEffect(() => {
+        if (admin && admin._id) {
+            const currentPath = window.location.pathname;
+            // e.g., if /admin/tickets, change to /admin/<id>/tickets
+            // ensure it hasn't already been injected
+            if (currentPath.startsWith("/admin") && !currentPath.includes(admin._id)) {
+                // If the path is exactly "/admin", new path is "/admin/<id>"
+                // If "/admin/tickets", new path is "/admin/<id>/tickets"
+                const suffix = currentPath.replace("/admin", "");
+                navigate(`/admin/${admin._id}${suffix}`, { replace: true });
+            }
+        }
+    }, [admin, navigate]);
+
     useEffect(() => {
         connectAdminSocket();
 
@@ -71,18 +86,20 @@ const AdminLayout = ({ children }) => {
         navigate("/admin/login");
     };
 
+    const basePath = admin?._id ? `/admin/${admin._id}` : "/admin";
+
     const navItems = [
-        { to: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: null, end: true },
-        { to: "/admin/tickets", label: "Tickets", icon: Ticket, permission: "VIEW_TICKETS", badge: counts.pending },
-        { to: "/admin/technicians", label: "Technicians", icon: Users, permission: "VIEW_TECHNICIANS" },
-        { to: "/admin/payments", label: "Payments", icon: Wallet, permission: "VIEW_PAYMENTS", badge: counts.toVerify },
-        { to: "/admin/wallets", label: "Wallets", icon: Landmark, permission: "VIEW_WALLETS" },
-        { to: "/admin/services", label: "Pricing", icon: Package, permission: "MANAGE_PRICING" },
-        { to: "/admin/staff", label: "Team", icon: UserCog, permission: "MANAGE_STAFF" },
-        { to: "/admin/analytics", label: "Analytics", icon: TrendingUp, permission: "VIEW_ANALYTICS" },
+        { to: basePath, label: "Dashboard", icon: LayoutDashboard, permission: null, end: true },
+        { to: `${basePath}/tickets`, label: "Tickets", icon: Ticket, permission: "VIEW_TICKETS", badge: counts.pending },
+        { to: `${basePath}/technicians`, label: "Technicians", icon: Users, permission: "VIEW_TECHNICIANS" },
+        { to: `${basePath}/payments`, label: "Payments", icon: Wallet, permission: "VIEW_PAYMENTS", badge: counts.toVerify },
+        { to: `${basePath}/wallets`, label: "Wallets", icon: Landmark, permission: "VIEW_WALLETS", badge: counts.wallets },
+        { to: `${basePath}/services`, label: "Pricing", icon: Package, permission: "MANAGE_PRICING" },
+        { to: `${basePath}/staff`, label: "Team", icon: UserCog, permission: "MANAGE_STAFF" },
+        { to: `${basePath}/analytics`, label: "Analytics", icon: TrendingUp, permission: "VIEW_ANALYTICS" },
     ].filter((item) => !item.permission || hasPermission(item.permission));
 
-    const totalAlerts = (counts.pending || 0) + (counts.toVerify || 0);
+    const totalAlerts = (counts.pending || 0) + (counts.toVerify || 0) + (counts.wallets || 0);
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -95,10 +112,15 @@ const AdminLayout = ({ children }) => {
             >
                 <div className="p-5 border-b border-white/10 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="bg-green-600 p-1.5 rounded-lg">
-                            <Hexagon className="w-4 h-4 text-white fill-white" />
+                        <img 
+                            src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                            alt="Cosmosgen Logo" 
+                            className="h-7" 
+                        />
+                        <div className="flex flex-col">
+                            <span className="font-bold text-sm leading-tight">Cosmosgen</span>
+                            <span className="text-[9px] text-white/50 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
                         </div>
-                        <span className="font-bold text-sm">Cosmosgen</span>
                     </div>
                     <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-white/60">
                         <X className="w-5 h-5" />
@@ -155,7 +177,17 @@ const AdminLayout = ({ children }) => {
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full" />
                         )}
                     </button>
-                    <span className="font-bold text-gray-900 flex-1">Cosmosgen Backoffice</span>
+                    <div className="flex-1 flex items-center gap-2">
+                        <img 
+                            src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                            alt="Cosmosgen" 
+                            className="h-5" 
+                        />
+                        <div className="flex flex-col">
+                            <span className="font-bold text-gray-900 text-sm leading-tight">Cosmosgen</span>
+                            <span className="text-[9px] text-gray-500 uppercase tracking-widest leading-tight">Backoffice</span>
+                        </div>
+                    </div>
                     {totalAlerts > 0 && (
                         <span className="flex items-center gap-1 bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded-full">
                             <Bell className="w-3 h-3" />

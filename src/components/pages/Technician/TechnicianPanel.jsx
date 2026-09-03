@@ -68,6 +68,16 @@ const TechnicianPanel = () => {
     }, [loadBootstrap]);
 
     useEffect(() => {
+        if (data?.profile?._id) {
+            const currentPath = window.location.pathname;
+            if (currentPath.startsWith("/technician/admin") && !currentPath.includes(data.profile._id)) {
+                const suffix = currentPath.replace("/technician/admin", "");
+                navigate(`/technician/admin/${data.profile._id}${suffix}`, { replace: true });
+            }
+        }
+    }, [data, navigate]);
+
+    useEffect(() => {
         connectTechSocket();
 
         const onAssigned = (p) => {
@@ -198,12 +208,14 @@ const TechnicianPanel = () => {
                 space and puts navigation nowhere near the eye */}
             <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:h-screen lg:sticky lg:top-0 bg-slate-900 text-white">
                 <div className="p-5 border-b border-white/10 flex items-center gap-2.5">
-                    <div className="bg-green-600 p-2 rounded-lg">
-                        <Hexagon className="w-5 h-5 text-white fill-white" />
-                    </div>
+                    <img 
+                        src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                        alt="Cosmosgen Logo" 
+                        className="h-8" 
+                    />
                     <div>
                         <p className="font-bold text-sm">Cosmosgen</p>
-                        <p className="text-[11px] text-white/50">Technician</p>
+                        <p className="text-[11px] text-white/50 tracking-wider uppercase">Technician</p>
                     </div>
                 </div>
 
@@ -280,9 +292,11 @@ const TechnicianPanel = () => {
                 {/* MOBILE HEADER */}
                 <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="bg-green-700 p-1.5 rounded-lg shrink-0">
-                            <Hexagon className="w-4 h-4 text-white fill-white" />
-                        </div>
+                        <img 
+                            src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                            alt="Cosmosgen" 
+                            className="h-6 shrink-0" 
+                        />
                         <div className="min-w-0">
                             <p className="font-bold text-gray-900 text-sm leading-tight truncate">
                                 {profile.name?.split(" ")[0]}

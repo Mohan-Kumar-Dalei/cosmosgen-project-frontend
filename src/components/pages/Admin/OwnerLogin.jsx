@@ -39,10 +39,15 @@ const OwnerLogin = () => {
 
                 <div className="bg-white rounded-b-2xl shadow-xl p-8">
                     <div className="flex items-center gap-2 mb-8">
-                        <div className="bg-slate-900 p-1.5 rounded-lg">
-                            <Hexagon className="w-5 h-5 text-amber-400 fill-amber-400" />
+                        <img 
+                            src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                            alt="Cosmosgen Logo" 
+                            className="h-8" 
+                        />
+                        <div className="flex flex-col">
+                            <span className="font-bold text-gray-900 text-lg leading-tight">Cosmosgen</span>
+                            <span className="text-[10px] text-gray-500 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
                         </div>
-                        <span className="font-bold text-gray-900 text-lg">Cosmosgen</span>
                     </div>
 
                     <h1 className="text-2xl font-bold text-gray-900 mb-1">Owner sign in</h1>

@@ -18,6 +18,8 @@ const PERIODS = [
     { key: 365, label: "1 year" },
 ];
 
+import { useAdminData } from "./AdminDataContext";
+
 const SERVICE_COLOURS = ["#15803d", "#2563eb", "#d97706", "#7c3aed", "#dc2626", "#0891b2"];
 
 const formatBucket = (period, groupedBy) => {
@@ -29,6 +31,7 @@ const formatBucket = (period, groupedBy) => {
 };
 
 const AdminAnalytics = () => {
+    const { globalRefreshTrigger } = useAdminData();
     const [days, setDays] = useState(30);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -52,7 +55,7 @@ const AdminAnalytics = () => {
     useEffect(() => {
         setLoading(true);
         load(days);
-    }, [days, load]);
+    }, [days, load, globalRefreshTrigger]);
 
     const handleDownload = async () => {
         setDownloading(true);
@@ -211,7 +214,7 @@ const AdminAnalytics = () => {
                         {chartData.length === 0 ? (
                             <p className="text-sm text-gray-500 py-12 text-center">No revenue in this period.</p>
                         ) : (
-                            <ResponsiveContainer width="100%" height={280}>
+                            <ResponsiveContainer width="100%" height={280} minHeight={280}>
                                 <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="onlineFill" x1="0" y1="0" x2="0" y2="1">

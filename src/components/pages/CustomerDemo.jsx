@@ -92,10 +92,15 @@ const RegisterStep = ({ onRegistered }) => {
         <div className="flex-1 flex items-center justify-center bg-slate-900 px-6">
             <div className="w-full">
                 <div className="flex items-center gap-2 mb-6">
-                    <div className="bg-green-600 p-1.5 rounded-lg">
-                        <Hexagon className="w-4 h-4 text-white fill-white" />
+                    <img 
+                        src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                        alt="Cosmosgen Logo" 
+                        className="h-7" 
+                    />
+                    <div className="flex flex-col">
+                        <span className="font-bold text-white text-base leading-tight">Cosmosgen</span>
+                        <span className="text-[9px] text-white/60 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
                     </div>
-                    <span className="font-bold text-white text-base">Cosmosgen</span>
                 </div>
 
                 <h1 className="text-xl font-bold text-white mb-1">Get help fast</h1>
@@ -185,13 +190,15 @@ const RegisterStep = ({ onRegistered }) => {
 
 const ServicePickerStep = ({ user, onSelect }) => (
     <div className="flex-1 flex flex-col bg-[#e5ddd5]">
-        <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-3 shrink-0">
-            <div className="bg-green-600 p-1.5 rounded-lg">
-                <Hexagon className="w-4 h-4 text-white fill-white" />
-            </div>
-            <div>
-                <p className="font-semibold text-sm">Cosmosgen Support</p>
-                <p className="text-xs text-white/50">Hi {user.name.split(" ")[0]} 👋</p>
+        <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-2 shrink-0">
+            <img 
+                src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                alt="Cosmosgen" 
+                className="h-6" 
+            />
+            <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">Cosmosgen Support</p>
+                <p className="text-[10px] text-white/50 truncate">Hi {user.name.split(" ")[0]} 👋</p>
             </div>
         </div>
 
@@ -339,15 +346,18 @@ useEffect(() => {
 
     return (
         <div className="flex-1 flex flex-col bg-[#e5ddd5] min-h-0">
-            <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-3 shrink-0">
-                <div className="bg-green-600 p-1.5 rounded-lg">
-                    <Hexagon className="w-4 h-4 text-white fill-white" />
-                </div>
+            <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-2 shrink-0 z-10 shadow-sm relative">
+                <img 
+                    src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                    alt="Cosmosgen" 
+                    className="h-6" 
+                />
                 <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">Cosmosgen Support</p>
-                    <p className="text-xs text-white/50">{connected ? "Online" : "Connecting..."}</p>
+                    <p className="font-semibold text-sm truncate">{service.label}</p>
+                    <p className="text-[10px] text-green-400 font-medium tracking-wide uppercase truncate">
+                        {aiTyping ? "Support is typing..." : "Online"}
+                    </p>
                 </div>
-                <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-400" : "bg-gray-400"}`} />
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">

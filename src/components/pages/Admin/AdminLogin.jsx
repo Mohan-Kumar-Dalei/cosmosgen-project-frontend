@@ -33,10 +33,15 @@ const AdminLogin = () => {
         <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-8">
             <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8">
                 <div className="flex items-center gap-2 mb-8">
-                    <div className="bg-green-700 p-1.5 rounded-lg">
-                        <Hexagon className="w-5 h-5 text-white fill-white" />
+                    <img 
+                        src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
+                        alt="Cosmosgen Logo" 
+                        className="h-8" 
+                    />
+                    <div className="flex flex-col">
+                        <span className="font-bold text-gray-900 text-lg leading-tight">Cosmosgen</span>
+                        <span className="text-[10px] text-gray-500 uppercase tracking-widest leading-tight">Backoffice</span>
                     </div>
-                    <span className="font-bold text-gray-900 text-lg">Cosmosgen Backoffice</span>
                 </div>
 
                 <h1 className="text-2xl font-bold text-gray-900 mb-1">Sign in</h1>

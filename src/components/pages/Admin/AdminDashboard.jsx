@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import { useAdminAuth } from "../Admin/adminAuthContext";
+import { useAdminData } from "./AdminDataContext";
 import { api, getErrorMessage } from "../../services/api";
 import { adminSocket, connectAdminSocket } from "../../services/socket";
 import {
@@ -33,6 +34,7 @@ const StatCard = ({ label, value, sub, icon: Icon, tone = "gray" }) => {
 
 const AdminDashboard = () => {
     const { admin, hasPermission } = useAdminAuth();
+    const { globalRefreshTrigger } = useAdminData();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");

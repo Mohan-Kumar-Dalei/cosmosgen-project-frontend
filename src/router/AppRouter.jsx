@@ -40,42 +40,38 @@ const AppRouter = () => {
                     <Route path="/technician/admin/register" element={<TechnicianRegister />} />
                     <Route path="/technician/admin/login" element={<TechnicianLogin />} />
                     <Route path="/technician/admin/profile" element={<TechnicianProfile />} />
+                    <Route path="/technician/admin/:id/profile" element={<TechnicianProfile />} />
                     <Route path="/technician/admin" element={<TechnicianPanel />} />
+                    <Route path="/technician/admin/:id" element={<TechnicianPanel />} />
 
                     {/* Admin (backoffice) */}
                     <Route path="/admin/register" element={<AdminRegister />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/owner/login" element={<OwnerLogin />} />
-                    <Route
-                        path="/admin"
-                        element={
-                            <AdminProtectedRoute>
-                                <AdminDashboard />
-                            </AdminProtectedRoute>
-                        }
-                    />
-                    <Route path="/admin/tickets" element={
-                        <AdminProtectedRoute requiredPermission="VIEW_TICKETS"><AdminTickets /></AdminProtectedRoute>
-                    } />
-                    <Route path="/admin/payments" element={
-                        <AdminProtectedRoute requiredPermission="VIEW_PAYMENTS"><AdminPayments /></AdminProtectedRoute>
-                    } />
-                    <Route path="/admin/services" element={
-                        <AdminProtectedRoute requiredPermission="MANAGE_PRICING"><AdminServices /></AdminProtectedRoute>
-                    } />
-                    <Route path="/admin/technicians" element={
-                        <AdminProtectedRoute requiredPermission="VIEW_TECHNICIANS"><AdminTechnicians /></AdminProtectedRoute>
-                    } />
+                    
+                    <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+                    
+                    <Route path="/admin/tickets" element={<AdminProtectedRoute requiredPermission="VIEW_TICKETS"><AdminTickets /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id/tickets" element={<AdminProtectedRoute requiredPermission="VIEW_TICKETS"><AdminTickets /></AdminProtectedRoute>} />
+                    
+                    <Route path="/admin/payments" element={<AdminProtectedRoute requiredPermission="VIEW_PAYMENTS"><AdminPayments /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id/payments" element={<AdminProtectedRoute requiredPermission="VIEW_PAYMENTS"><AdminPayments /></AdminProtectedRoute>} />
+                    
+                    <Route path="/admin/services" element={<AdminProtectedRoute requiredPermission="MANAGE_PRICING"><AdminServices /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id/services" element={<AdminProtectedRoute requiredPermission="MANAGE_PRICING"><AdminServices /></AdminProtectedRoute>} />
+                    
+                    <Route path="/admin/technicians" element={<AdminProtectedRoute requiredPermission="VIEW_TECHNICIANS"><AdminTechnicians /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id/technicians" element={<AdminProtectedRoute requiredPermission="VIEW_TECHNICIANS"><AdminTechnicians /></AdminProtectedRoute>} />
 
-                    <Route path="/admin/wallets" element={
-                        <AdminProtectedRoute requiredPermission="VIEW_WALLETS"><AdminWallets /></AdminProtectedRoute>
-                    } />
-                    <Route path="/admin/staff" element={
-                        <AdminProtectedRoute requiredPermission="MANAGE_STAFF"><AdminStaff /></AdminProtectedRoute>
-                    } />
-                    <Route path="/admin/analytics" element={
-                        <AdminProtectedRoute requiredPermission="VIEW_ANALYTICS"><AdminAnalytics /></AdminProtectedRoute>
-                    } />
+                    <Route path="/admin/wallets" element={<AdminProtectedRoute requiredPermission="VIEW_WALLETS"><AdminWallets /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id/wallets" element={<AdminProtectedRoute requiredPermission="VIEW_WALLETS"><AdminWallets /></AdminProtectedRoute>} />
+                    
+                    <Route path="/admin/staff" element={<AdminProtectedRoute requiredPermission="MANAGE_STAFF"><AdminStaff /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id/staff" element={<AdminProtectedRoute requiredPermission="MANAGE_STAFF"><AdminStaff /></AdminProtectedRoute>} />
+                    
+                    <Route path="/admin/analytics" element={<AdminProtectedRoute requiredPermission="VIEW_ANALYTICS"><AdminAnalytics /></AdminProtectedRoute>} />
+                    <Route path="/admin/:id/analytics" element={<AdminProtectedRoute requiredPermission="VIEW_ANALYTICS"><AdminAnalytics /></AdminProtectedRoute>} />
 
                     <Route path="*" element={<Navigate to="/chat" replace />} />
                 </Routes>
