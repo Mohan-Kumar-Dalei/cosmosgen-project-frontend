@@ -3,20 +3,21 @@ import AdminLayout from "./AdminLayout";
 import { useAdminAuth } from "../Admin/adminAuthContext";
 import { api, getErrorMessage } from "../../services/api";
 import { useAdminData } from "./AdminDataContext";
+import CustomDropdown from "../../ui/CustomDropdown";
 import {
-    Loader2, AlertCircle, RefreshCw, X, Wallet, Phone,
-    ArrowUpRight, ArrowDownLeft, CheckCircle2, MapPin,
+    Loader2, AlertCircle, X, Wallet, Phone,
+    ArrowUpRight, ArrowDownLeft, CheckCircle2, MapPin, RefreshCw,
 } from "lucide-react";
 
 const AdminWallets = () => {
-    const { globalRefreshTrigger } = useAdminData();
+    const { globalRefreshTrigger, refreshCounts } = useAdminData();
     const [rows, setRows] = useState([]);
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [flash, setFlash] = useState("");
     const [selectedId, setSelectedId] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     const load = useCallback(async () => {
         try {
@@ -36,13 +37,14 @@ const AdminWallets = () => {
         load();
         const interval = setInterval(load, 60000);
         return () => clearInterval(interval);
-    }, [load, globalRefreshTrigger]);
+    }, [load]);
 
-    const handleDone = (message) => {
+    const handleDone = async (message) => {
         setSelectedId(null);
         setFlash(message);
         setTimeout(() => setFlash(""), 4000);
-        load();
+        await load();
+        refreshCounts();
     };
 
     const owed = rows.filter((r) => r.direction === "company_owes");
@@ -434,13 +436,27 @@ const SettleDialog = ({ mode, technicianId, technicianName, maxDisplay, maxPaise
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     {isPayout ? "UTR / transaction reference" : "How was it received?"}
                 </label>
-                <input
-                    type="text"
-                    value={reference}
-                    onChange={(e) => { setReference(e.target.value); setError(""); }}
-                    placeholder={isPayout ? "e.g. UTR 412345678901" : "e.g. cash at office"}
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700"
-                />
+                {isPayout ? (
+                    <input
+                        type="text"
+                        value={reference}
+                        onChange={(e) => { setReference(e.target.value); setError(""); }}
+                        placeholder="e.g. UTR 412345678901"
+                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700"
+                    />
+                ) : (
+                    <CustomDropdown
+                        value={reference}
+                        onChange={(val) => { setReference(val); setError(""); }}
+                        options={[
+                            { value: "UPI", label: "UPI" },
+                            { value: "Razorpay", label: "Razorpay" },
+                            { value: "Cash", label: "Cash" },
+                            { value: "Bank Transfer", label: "Bank Transfer" }
+                        ]}
+                        placeholder="Select method..."
+                    />
+                )}
                 <p className="text-xs text-gray-400 mt-1">
                     Without this the entry can't be traced back later.
                 </p>

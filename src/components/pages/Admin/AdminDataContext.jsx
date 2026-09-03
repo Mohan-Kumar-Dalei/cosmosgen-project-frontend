@@ -18,6 +18,7 @@ export const AdminDataProvider = ({ children }) => {
         scheduled: 0,
         active: 0,
         toVerify: 0,
+        awaitingPayment: 0,
         wallets: 0,
     });
     const [globalRefreshTrigger, setGlobalRefreshTrigger] = useState(0);
@@ -41,6 +42,7 @@ export const AdminDataProvider = ({ children }) => {
                 scheduled: t.scheduled || 0,
                 active: (t.assigned || 0) + (t.inProgress || 0),
                 toVerify: res.data.data.awaitingReconcile?.count || res.data.data.unverifiedCash?.count || 0,
+                awaitingPayment: res.data.data.awaitingPayment?.count || 0,
                 wallets: res.data.data.cashWithTechnicians?.count || 0,
             });
         } catch {

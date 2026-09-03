@@ -4,6 +4,7 @@ import { api, getErrorMessage } from "../../services/api";
 import { techSocket, connectTechSocket, disconnectTechSocket } from "../../services/socket";
 import { notifyNew, notifyDone, notifyInfo } from "../../services/notify";
 import ActiveJobCard from "./ActiveJobCard";
+import CustomDropdown from "../../ui/CustomDropdown";
 import {
     Hexagon, MapPin, Wrench, LogOut, User, Layers, Banknote,
     Briefcase, History as HistoryIcon, CalendarDays,
@@ -528,15 +529,18 @@ const DeclineModal = ({ ticket, onClose, onDone, onError }) => {
                 <p className="text-sm text-gray-500 mb-4">
                     The office will see your reason and sort it out with the customer.
                 </p>
-                {/* text-base, not text-sm - iOS zooms the page on any input
-                    below 16px */}
-                <textarea
+                <CustomDropdown
                     value={reason}
-                    onChange={(e) => setReason(e.target.value)}
+                    onChange={(val) => setReason(val)}
+                    options={[
+                        { value: "Location is too far", label: "Location is too far" },
+                        { value: "Customer is not responding", label: "Customer is not responding" },
+                        { value: "Vehicle breakdown / Traffic", label: "Vehicle breakdown / Traffic" },
+                        { value: "Missing spare parts", label: "Missing spare parts" },
+                        { value: "Other", label: "Other" }
+                    ]}
                     placeholder="Why can't you take this one?"
-                    rows={3}
-                    autoFocus
-                    className="w-full px-3.5 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+                    className="mb-4"
                 />
                 <div className="flex gap-2 mt-4">
                     <button

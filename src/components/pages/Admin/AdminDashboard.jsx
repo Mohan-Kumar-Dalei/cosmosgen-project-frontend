@@ -69,6 +69,7 @@ const AdminDashboard = () => {
         adminSocket.on("ticket:cancelled", refresh);
         adminSocket.on("ticket:rejected", refresh);
         adminSocket.on("payment:collected", refresh);
+        adminSocket.on("tech:status", refresh);
 
         return () => {
             isMountedRef.current = false;
@@ -78,6 +79,7 @@ const AdminDashboard = () => {
             adminSocket.off("ticket:cancelled", refresh);
             adminSocket.off("ticket:rejected", refresh);
             adminSocket.off("payment:collected", refresh);
+            adminSocket.off("tech:status", refresh);
         };
     }, [loadStats]);
 

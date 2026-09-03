@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import AdminLayout from "./AdminLayout";
 import { api, getErrorMessage } from "../../services/api";
-import { Plus, Trash2, Loader2, AlertCircle, Pencil, X, Package, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Pencil, X, Package, RefreshCw, ChevronDown } from "lucide-react";
 
 const CATEGORY_LABELS = { labour: "Service charge", part: "Part", service: "Add-on service" };
 const CATEGORY_STYLES = {
@@ -10,14 +10,18 @@ const CATEGORY_STYLES = {
     service: "bg-purple-100 text-purple-700",
 };
 
+const APPLIANCES = ["AC", "Refrigerator", "Washing Machine", "Microwave", "Water Purifier (RO)", "Other"];
+
 const AdminServices = () => {
     const [services, setServices] = useState([]);
     const [activeKey, setActiveKey] = useState("");
+    const [activeAppliance, setActiveAppliance] = useState("AC");
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
+    const [isApplianceDropdownOpen, setIsApplianceDropdownOpen] = useState(false);
 
     const load = useCallback(async () => {
         try {
@@ -36,7 +40,11 @@ const AdminServices = () => {
     useEffect(() => { load(); }, [load]);
 
     const activeService = services.find((s) => s.serviceKey === activeKey);
-    const items = activeService?.itemsList || [];
+    let items = activeService?.itemsList || [];
+
+    if (activeKey === "AC_APPLIANCE") {
+        items = items.filter(i => i.subCategory === activeAppliance);
+    }
 
     const handleDelete = async (itemId) => {
         try {
@@ -92,6 +100,37 @@ const AdminServices = () => {
                             <span className="text-[10px] font-bold text-gray-400">{s.itemsList.length}</span>
                         </button>
                     ))}
+                </div>
+            )}
+
+            {activeKey === "AC_APPLIANCE" && (
+                <div className="mb-5 relative max-w-[240px]">
+                    <div 
+                        onClick={() => setIsApplianceDropdownOpen(!isApplianceDropdownOpen)}
+                        className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium cursor-pointer hover:border-gray-400 transition-colors"
+                    >
+                        <span className="text-gray-900">{activeAppliance}</span>
+                        <ChevronDown className={"w-4 h-4 text-gray-500 transition-transform duration-200 " + (isApplianceDropdownOpen ? "rotate-180" : "")} />
+                    </div>
+                    {isApplianceDropdownOpen && (
+                        <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIsApplianceDropdownOpen(false)} />
+                            <div className="absolute top-full left-0 mt-1.5 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-20 py-1.5 max-h-60 overflow-y-auto">
+                                {APPLIANCES.map((app) => (
+                                    <button
+                                        key={app}
+                                        className={"w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 " + (activeAppliance === app ? "bg-green-50/50 text-green-700 font-bold" : "text-gray-700 font-medium")}
+                                        onClick={() => {
+                                            setActiveAppliance(app);
+                                            setIsApplianceDropdownOpen(false);
+                                        }}
+                                    >
+                                        {app}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -178,6 +217,7 @@ const AdminServices = () => {
                 <PricingForm
                     services={services}
                     activeKey={activeKey}
+                    activeAppliance={activeAppliance}
                     editing={editing}
                     onClose={() => { setShowForm(false); setEditing(null); }}
                     onSaved={() => { setShowForm(false); setEditing(null); load(); }}
@@ -188,7 +228,7 @@ const AdminServices = () => {
     );
 };
 
-const PricingForm = ({ services, activeKey, editing, onClose, onSaved, onError }) => {
+const PricingForm = ({ services, activeKey, activeAppliance, editing, onClose, onSaved, onError }) => {
     const [serviceKey, setServiceKey] = useState(activeKey);
     const [form, setForm] = useState({
         name: editing?.name || "",
@@ -196,6 +236,7 @@ const PricingForm = ({ services, activeKey, editing, onClose, onSaved, onError }
         priceRupees: editing ? (editing.pricePaise / 100).toString() : "",
         isDefault: editing?.isDefault || false,
         isActive: editing ? editing.isActive : true,
+        subCategory: editing?.subCategory || (activeKey === "AC_APPLIANCE" ? activeAppliance : ""),
     });
     const [submitting, setSubmitting] = useState(false);
 
@@ -211,6 +252,7 @@ const PricingForm = ({ services, activeKey, editing, onClose, onSaved, onError }
                     priceRupees: Number(form.priceRupees),
                     isDefault: form.isDefault,
                     isActive: form.isActive,
+                    ...(activeKey === "AC_APPLIANCE" && form.subCategory && { subCategory: form.subCategory })
                 });
             } else {
                 await api.post("/admin/pricing/" + serviceKey + "/items", {
@@ -218,6 +260,7 @@ const PricingForm = ({ services, activeKey, editing, onClose, onSaved, onError }
                     category: form.category,
                     priceRupees: Number(form.priceRupees),
                     isDefault: form.isDefault,
+                    ...(serviceKey === "AC_APPLIANCE" && form.subCategory && { subCategory: form.subCategory })
                 });
             }
             onSaved();
@@ -242,11 +285,32 @@ const PricingForm = ({ services, activeKey, editing, onClose, onSaved, onError }
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">Service</label>
                         <select
                             value={serviceKey}
-                            onChange={(e) => setServiceKey(e.target.value)}
+                            onChange={(e) => {
+                                setServiceKey(e.target.value);
+                                if (e.target.value === "AC_APPLIANCE" && !form.subCategory) {
+                                    setForm({ ...form, subCategory: activeAppliance });
+                                }
+                            }}
                             className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-3"
                         >
                             {services.map((s) => (
                                 <option key={s.serviceKey} value={s.serviceKey}>{s.serviceLabel}</option>
+                            ))}
+                        </select>
+                    </>
+                )}
+
+                {(serviceKey === "AC_APPLIANCE" || (editing && activeKey === "AC_APPLIANCE")) && (
+                    <>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Appliance</label>
+                        <select
+                            value={form.subCategory}
+                            onChange={(e) => setForm({ ...form, subCategory: e.target.value })}
+                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-3"
+                        >
+                            <option value="" disabled>Select appliance</option>
+                            {APPLIANCES.map((app) => (
+                                <option key={app} value={app}>{app}</option>
                             ))}
                         </select>
                     </>

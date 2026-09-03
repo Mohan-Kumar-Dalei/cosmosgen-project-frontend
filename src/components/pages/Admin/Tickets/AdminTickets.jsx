@@ -3,6 +3,7 @@ import AdminLayout from "../AdminLayout";
 import { api, getErrorMessage } from "../../../services/api";
 import { adminSocket, connectAdminSocket } from "../../../services/socket";
 import { useAdminData } from "../AdminDataContext";
+import CustomDropdown from "../../../ui/CustomDropdown";
 import {
     Clock, MapPin, Phone, Wrench, X, Search, Loader2,
     CheckCircle2, AlertCircle, Star, Navigation, Calendar,
@@ -57,10 +58,10 @@ const AdminTickets = () => {
     const [tab, setTab] = useState("Pending");
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [selectedId, setSelectedId] = useState(null);
     const [flash, setFlash] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
     const { refreshCounts, globalRefreshTrigger } = useAdminData();
 
     const loadTickets = useCallback(async (status) => {
@@ -79,7 +80,7 @@ const AdminTickets = () => {
     useEffect(() => {
         setLoading(true);
         loadTickets(tab);
-    }, [tab, loadTickets, globalRefreshTrigger]);
+    }, [tab, loadTickets]);
 
     useEffect(() => {
         // Auto-refresh so the queue is never stale
@@ -818,12 +819,19 @@ const CancelDialog = ({ ticket, onClose, onDone, onError }) => {
                 <h3 className="font-bold text-gray-900 mb-1">Cancel this ticket?</h3>
                 <p className="text-sm text-gray-500 mb-4">The customer will be notified.</p>
 
-                <textarea
+                <CustomDropdown
                     value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Reason for cancellation"
-                    rows={3}
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+                    onChange={(val) => setReason(val)}
+                    options={[
+                        { value: "Customer cancelled", label: "Customer cancelled" },
+                        { value: "Customer not responding", label: "Customer not responding" },
+                        { value: "Not serviceable area", label: "Not serviceable area" },
+                        { value: "Duplicate ticket", label: "Duplicate ticket" },
+                        { value: "Technician unavailable", label: "Technician unavailable" },
+                        { value: "Other", label: "Other" }
+                    ]}
+                    placeholder="Select a reason..."
+                    className="mb-4"
                 />
 
                 <div className="flex gap-2 mt-4">

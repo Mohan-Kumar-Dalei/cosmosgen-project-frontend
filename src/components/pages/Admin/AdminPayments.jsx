@@ -7,7 +7,7 @@ import { api, getErrorMessage } from "../../services/api";
 import { adminSocket, connectAdminSocket } from "../../services/socket";
 import {
     Loader2, AlertCircle, CheckCircle2, Receipt,
-    ShieldCheck, RefreshCw, Banknote, ArrowRight,
+    ShieldCheck, Banknote, ArrowRight, RefreshCw,
 } from "lucide-react";
 
 const TABS = [
@@ -38,10 +38,10 @@ const AdminPayments = () => {
     const [payments, setPayments] = useState([]);
     const [summary, setSummary] = useState({});
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [verifyingId, setVerifyingId] = useState(null);
     const [awaitingReconcile, setAwaitingReconcile] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
 
     const canVerify = hasPermission("VERIFY_PAYMENT");
 
@@ -69,7 +69,7 @@ const AdminPayments = () => {
     useEffect(() => {
         setLoading(true);
         load(tab);
-    }, [tab, load, globalRefreshTrigger]);
+    }, [tab, load]);
 
     useEffect(() => {
         const interval = setInterval(() => load(tab), 30000);
@@ -86,8 +86,8 @@ const AdminPayments = () => {
         setVerifyingId(id);
         try {
             await api.post("/admin/payments/" + id + "/verify");
-            load(tab);
-            refreshCounts();
+            await load(tab);
+            await refreshCounts();
         } catch (err) {
             setError(getErrorMessage(err, "Could not verify this payment"));
         } finally {
@@ -107,10 +107,9 @@ const AdminPayments = () => {
                 <button
                     onClick={() => { setRefreshing(true); load(tab); }}
                     disabled={refreshing}
-                    className="shrink-0 flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    className="shrink-0 p-2.5 text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                 >
                     <RefreshCw className={"w-4 h-4 " + (refreshing ? "animate-spin" : "")} />
-                    <span className="hidden sm:inline">Refresh</span>
                 </button>
             </div>
 
@@ -147,22 +146,27 @@ const AdminPayments = () => {
             </div>
 
             <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-lg w-fit overflow-x-auto max-w-full">
-                {TABS.map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className={"flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors " + (tab === t.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")}
-                    >
-                        {t.label}
-                        {/* Only on the reconcile tab - it's the one with work
-                            waiting behind it */}
-                        {t.key === "collected" && awaitingReconcile > 0 && (
-                            <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded-full">
-                                {awaitingReconcile}
-                            </span>
-                        )}
-                    </button>
-                ))}
+                {TABS.map((t) => {
+                    let count = 0;
+                    if (t.key === "collected") count = summary.online?.collected?.count || 0;
+                    else if (t.key === "pending") count = summary.online?.pending?.count || 0;
+                    else if (t.key === "verified") count = summary.online?.verified?.count || 0;
+
+                    return (
+                        <button
+                            key={t.key}
+                            onClick={() => setTab(t.key)}
+                            className={"flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors " + (tab === t.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+                        >
+                            {t.label}
+                            {count > 0 && (
+                                <span className={"px-1.5 py-0.5 text-[10px] font-bold rounded-full " + (tab === t.key ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-600")}>
+                                    {count}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
             {error && (

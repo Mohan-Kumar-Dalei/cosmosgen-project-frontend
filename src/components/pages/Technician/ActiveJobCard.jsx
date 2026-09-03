@@ -3,7 +3,7 @@ import { api, getErrorMessage } from "../../services/api";
 import {
     Phone, MapPin, AlertTriangle, Navigation, X, Loader2, Plus, Trash2,
     Receipt, CheckCircle2, RefreshCw, Copy, Minus, Banknote, Smartphone,
-    Briefcase,
+    Briefcase, ChevronDown
 } from "lucide-react";
 
 const buildDirectionsUrl = (lat, lon) => {
@@ -292,18 +292,18 @@ const ReleaseModal = ({ ticket, onClose, onDone, onError }) => {
                 <p className="text-sm text-gray-500 mb-4">
                     This job goes back to the office queue. They'll reassign it or contact the customer.
                 </p>
-                <select
+                <CustomDropdown
                     value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
-                >
-                    <option value="">Select a reason...</option>
-                    <option value="Location is too far">Location is too far</option>
-                    <option value="Customer is not responding">Customer is not responding</option>
-                    <option value="Vehicle breakdown / Traffic">Vehicle breakdown / Traffic</option>
-                    <option value="Missing spare parts">Missing spare parts</option>
-                    <option value="Other">Other</option>
-                </select>
+                    onChange={(val) => setReason(val)}
+                    options={[
+                        { value: "Location is too far", label: "Location is too far" },
+                        { value: "Customer is not responding", label: "Customer is not responding" },
+                        { value: "Vehicle breakdown / Traffic", label: "Vehicle breakdown / Traffic" },
+                        { value: "Missing spare parts", label: "Missing spare parts" },
+                        { value: "Other", label: "Other" }
+                    ]}
+                    placeholder="Select a reason..."
+                />
                 <div className="flex gap-2 mt-4">
                     <button onClick={onClose} className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50">
                         Keep job
@@ -327,7 +327,58 @@ const ReleaseModal = ({ ticket, onClose, onDone, onError }) => {
 const CATEGORY_ORDER = ["labour", "service", "part"];
 const CATEGORY_LABELS = { labour: "Service charge", service: "Add-on services", part: "Parts" };
 
+const SERVICES = [
+    { key: "AC_APPLIANCE", label: "AC & Appliance Repair" },
+    { key: "ELECTRICAL", label: "Electrical Issues" },
+    { key: "PLUMBING", label: "Plumbing Services" },
+    { key: "CARPENTRY", label: "Carpentry Services" },
+    { key: "PEST_CONTROL", label: "Pest Control" },
+    { key: "CLEANING", label: "Home Cleaning" },
+    { key: "PAINTING", label: "Painting Services" }
+];
+
+const CustomDropdown = ({ value, onChange, options, placeholder, className = "" }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectedOption = options.find((o) => o.value === value);
+
+    return (
+        <div className={`relative w-full ${className}`}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700"
+            >
+                <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${value === opt.value ? "bg-green-50 text-green-700 font-medium" : "text-gray-700"}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
 const BillModal = ({ ticket, onClose, onDone, onError }) => {
+    const [selectedServiceKey, setSelectedServiceKey] = useState(ticket.serviceKey);
     const [catalog, setCatalog] = useState([]);
     const [selected, setSelected] = useState({});
     const [customItems, setCustomItems] = useState([]);
@@ -338,11 +389,13 @@ const BillModal = ({ ticket, onClose, onDone, onError }) => {
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
     const [showCustom, setShowCustom] = useState(false);
+    const [activeAppliance, setActiveAppliance] = useState("");
 
     useEffect(() => {
         const load = async () => {
+            setLoading(true);
             try {
-                const res = await api.get("/technician/pricing", { params: { serviceKey: ticket.serviceKey } });
+                const res = await api.get("/technician/pricing", { params: { serviceKey: selectedServiceKey } });
                 setCatalog(res.data.data);
                 setOnlineAvailable(res.data.onlinePaymentAvailable !== false);
                 if (res.data.onlinePaymentAvailable === false) setPaymentMethod("cash");
@@ -358,7 +411,7 @@ const BillModal = ({ ticket, onClose, onDone, onError }) => {
             }
         };
         load();
-    }, [ticket.serviceKey]);
+    }, [selectedServiceKey]);
 
     const toggleItem = (id) => {
         setSelected((prev) => {
@@ -403,6 +456,7 @@ const BillModal = ({ ticket, onClose, onDone, onError }) => {
         try {
             await api.post("/technician/tickets/generateBill", {
                 ticketId: ticket._id,
+                serviceKey: selectedServiceKey,
                 catalogItems: catalogPayload,
                 customItems: validCustom.map((i) => ({
                     description: i.description.trim(),
@@ -418,7 +472,14 @@ const BillModal = ({ ticket, onClose, onDone, onError }) => {
         }
     };
 
-    const grouped = catalog.reduce((acc, item) => {
+    const isApplianceService = selectedServiceKey === "AC_APPLIANCE";
+    const applianceOptions = ["AC", "Refrigerator", "Washing Machine", "Microwave", "Water Purifier (RO)", "Other"];
+
+    const displayCatalog = isApplianceService && activeAppliance
+        ? catalog.filter(item => item.subCategory === activeAppliance)
+        : catalog;
+
+    const grouped = displayCatalog.reduce((acc, item) => {
         const key = item.category || "part";
         (acc[key] = acc[key] || []).push(item);
         return acc;
@@ -444,6 +505,31 @@ const BillModal = ({ ticket, onClose, onDone, onError }) => {
                         </div>
                     ) : (
                         <>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Service Type</label>
+                            <CustomDropdown
+                                className="mb-5"
+                                value={selectedServiceKey}
+                                onChange={(val) => {
+                                    setSelectedServiceKey(val);
+                                    setActiveAppliance("");
+                                    setSelected({});
+                                }}
+                                options={SERVICES.map(s => ({ value: s.key, label: s.label }))}
+                                placeholder="-- Choose Service --"
+                            />
+
+                            {isApplianceService && (
+                                <div className="mb-5">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Select Appliance</label>
+                                    <CustomDropdown
+                                        value={activeAppliance}
+                                        onChange={(val) => setActiveAppliance(val)}
+                                        options={applianceOptions.map(app => ({ value: app, label: app }))}
+                                        placeholder="-- Choose Appliance --"
+                                    />
+                                </div>
+                            )}
+
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">What did you do?</label>
                             <textarea
                                 value={workDone}
@@ -453,7 +539,14 @@ const BillModal = ({ ticket, onClose, onDone, onError }) => {
                                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-5"
                             />
 
-                            {catalog.length === 0 ? (
+                            {isApplianceService && !activeAppliance ? (
+                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-4 text-center">
+                                    <p className="text-sm font-semibold text-blue-800">Please select an appliance type</p>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                        Choose an appliance above to see its specific items.
+                                    </p>
+                                </div>
+                            ) : displayCatalog.length === 0 ? (
                                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-4">
                                     <p className="text-sm font-semibold text-amber-800">No price list set up</p>
                                     <p className="text-xs text-amber-700 mt-1">
@@ -478,39 +571,36 @@ const BillModal = ({ ticket, onClose, onDone, onError }) => {
                                                             key={item._id}
                                                             className={"border-2 rounded-xl transition-colors " + (isSelected ? "border-green-600 bg-green-50" : "border-gray-200")}
                                                         >
-                                                            <button
-                                                                onClick={() => toggleItem(item._id)}
-                                                                className="w-full flex items-center gap-2.5 p-3.5 text-left min-h-[60px]"
-                                                            >
-                                                                <div className={"w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 " + (isSelected ? "bg-green-600 border-green-600" : "border-gray-300")}>
-                                                                    {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-sm font-medium text-gray-900 leading-tight">{item.name}</p>
-                                                                    <p className="text-sm font-bold text-gray-900 mt-0.5">Rs {item.priceDisplay}</p>
-                                                                </div>
-                                                            </button>
-
-                                                            {isSelected && cat === "part" && (
-                                                                <div className="flex items-center justify-between px-3.5 pb-3 pt-1">
-                                                                    <span className="text-xs text-gray-500">Qty</span>
-                                                                    <div className="flex items-center gap-3">
+                                                            <div className="flex items-center w-full min-h-[60px]">
+                                                                <button
+                                                                    onClick={() => toggleItem(item._id)}
+                                                                    className="flex-1 flex items-center gap-2.5 p-3.5 text-left"
+                                                                >
+                                                                    <div className={"w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 " + (isSelected ? "bg-green-600 border-green-600" : "border-gray-300")}>
+                                                                        {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-sm font-medium text-gray-900 leading-tight">{item.name}</p>
+                                                                    </div>
+                                                                </button>
+                                                                {isSelected && cat === "part" && (
+                                                                    <div className="flex items-center gap-2 pr-3.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                                                                         <button
-                                                                            onClick={() => changeQty(item._id, -1)}
-                                                                            className="w-9 h-9 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center active:bg-gray-100"
+                                                                            onClick={(e) => { e.stopPropagation(); changeQty(item._id, -1); }}
+                                                                            className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center active:bg-gray-100 shadow-sm"
                                                                         >
                                                                             <Minus className="w-4 h-4 text-gray-700" />
                                                                         </button>
-                                                                        <span className="text-base font-bold w-6 text-center">{qty}</span>
+                                                                        <span className="text-sm font-bold w-4 text-center">{qty}</span>
                                                                         <button
-                                                                            onClick={() => changeQty(item._id, 1)}
-                                                                            className="w-9 h-9 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center active:bg-gray-100"
+                                                                            onClick={(e) => { e.stopPropagation(); changeQty(item._id, 1); }}
+                                                                            className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center active:bg-gray-100 shadow-sm"
                                                                         >
                                                                             <Plus className="w-4 h-4 text-gray-700" />
                                                                         </button>
                                                                     </div>
-                                                                </div>
-                                                            )}
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}

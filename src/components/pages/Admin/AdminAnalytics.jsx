@@ -7,8 +7,8 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-    Loader2, AlertCircle, RefreshCw, TrendingUp, Wrench,
-    Package, Download, Sheet,
+    Loader2, AlertCircle, TrendingUp, Wrench,
+    Package, Download, Sheet, RefreshCw,
 } from "lucide-react";
 
 const PERIODS = [
@@ -35,9 +35,9 @@ const AdminAnalytics = () => {
     const [days, setDays] = useState(30);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [error, setError] = useState("");
+    const [refreshing, setRefreshing] = useState(false);
 
     const load = useCallback(async (period) => {
         try {
@@ -55,7 +55,7 @@ const AdminAnalytics = () => {
     useEffect(() => {
         setLoading(true);
         load(days);
-    }, [days, load, globalRefreshTrigger]);
+    }, [days, load]);
 
     const handleDownload = async () => {
         setDownloading(true);

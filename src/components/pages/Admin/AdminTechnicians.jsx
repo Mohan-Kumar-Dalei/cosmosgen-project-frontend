@@ -2,10 +2,11 @@ import React, { useEffect, useState, useCallback } from "react";
 import AdminLayout from "./AdminLayout";
 import { useAdminAuth } from "../Admin/adminAuthContext";
 import { api, getErrorMessage } from "../../services/api";
+import { adminSocket } from "../../services/socket";
 import {
-    Loader2, AlertCircle, RefreshCw, Search, Star, MapPin, Phone,
+    Loader2, AlertCircle, Search, Star, MapPin, Phone,
     X, Banknote, Wrench, Navigation, CalendarClock, Ban, CheckCircle2,
-    Clock, ShieldOff, UserCheck,
+    Clock, ShieldOff, UserCheck, RefreshCw,
 } from "lucide-react";
 
 const VIEW_TABS = [
@@ -48,10 +49,10 @@ const AdminTechnicians = () => {
     const [technicians, setTechnicians] = useState([]);
     const [pendingCount, setPendingCount] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [flash, setFlash] = useState("");
     const [selectedId, setSelectedId] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     const load = useCallback(async (viewKey, statusFilter, searchTerm) => {
         try {
@@ -75,11 +76,18 @@ const AdminTechnicians = () => {
         setLoading(true);
         const timer = setTimeout(() => load(view, status, search), search ? 400 : 0);
         return () => clearTimeout(timer);
-    }, [view, status, search, load, globalRefreshTrigger]);
+    }, [view, status, search, load]);
 
     useEffect(() => {
         const interval = setInterval(() => load(view, status, search), 30000);
-        return () => clearInterval(interval);
+        
+        const onTechStatus = () => load(view, status, search);
+        adminSocket.on("tech:status", onTechStatus);
+        
+        return () => {
+            clearInterval(interval);
+            adminSocket.off("tech:status", onTechStatus);
+        };
     }, [view, status, search, load]);
 
     const handleChanged = (message) => {

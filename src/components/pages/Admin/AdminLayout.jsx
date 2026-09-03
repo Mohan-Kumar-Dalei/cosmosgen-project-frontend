@@ -69,6 +69,7 @@ const AdminLayout = ({ children }) => {
         adminSocket.on("ticket:started-early", onStartedEarly);
         adminSocket.on("payment:collected", onPayment);
         adminSocket.on("ticket:taken", onTaken);
+        adminSocket.on("tech:status", onTaken);
 
         return () => {
             adminSocket.off("ticket:new", onNewTicket);
@@ -78,6 +79,7 @@ const AdminLayout = ({ children }) => {
             adminSocket.off("ticket:started-early", onStartedEarly);
             adminSocket.off("payment:collected", onPayment);
             adminSocket.off("ticket:taken", onTaken);
+            adminSocket.off("tech:status", onTaken);
         };
     }, [refreshCounts]);
 
@@ -92,14 +94,14 @@ const AdminLayout = ({ children }) => {
         { to: basePath, label: "Dashboard", icon: LayoutDashboard, permission: null, end: true },
         { to: `${basePath}/tickets`, label: "Tickets", icon: Ticket, permission: "VIEW_TICKETS", badge: counts.pending },
         { to: `${basePath}/technicians`, label: "Technicians", icon: Users, permission: "VIEW_TECHNICIANS" },
-        { to: `${basePath}/payments`, label: "Payments", icon: Wallet, permission: "VIEW_PAYMENTS", badge: counts.toVerify },
+        { to: `${basePath}/payments`, label: "Payments", icon: Wallet, permission: "VIEW_PAYMENTS", badge: (counts.toVerify || 0) + (counts.awaitingPayment || 0) },
         { to: `${basePath}/wallets`, label: "Wallets", icon: Landmark, permission: "VIEW_WALLETS", badge: counts.wallets },
         { to: `${basePath}/services`, label: "Pricing", icon: Package, permission: "MANAGE_PRICING" },
         { to: `${basePath}/staff`, label: "Team", icon: UserCog, permission: "MANAGE_STAFF" },
         { to: `${basePath}/analytics`, label: "Analytics", icon: TrendingUp, permission: "VIEW_ANALYTICS" },
     ].filter((item) => !item.permission || hasPermission(item.permission));
 
-    const totalAlerts = (counts.pending || 0) + (counts.toVerify || 0) + (counts.wallets || 0);
+    const totalAlerts = (counts.pending || 0) + (counts.toVerify || 0) + (counts.awaitingPayment || 0) + (counts.wallets || 0);
 
     return (
         <div className="min-h-screen bg-gray-50 flex">

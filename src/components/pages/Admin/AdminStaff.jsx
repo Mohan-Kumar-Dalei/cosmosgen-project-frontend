@@ -3,19 +3,19 @@ import AdminLayout from "./AdminLayout";
 import { useAdminAuth } from "../Admin/adminAuthContext";
 import { api, getErrorMessage } from "../../services/api";
 import {
-    Loader2, AlertCircle, RefreshCw, UserPlus, X, Eye, EyeOff,
-    CheckCircle2, Power, ShieldCheck, Copy,
+    Loader2, AlertCircle, UserPlus, X, Eye, EyeOff,
+    CheckCircle2, Power, ShieldCheck, Copy, RefreshCw,
 } from "lucide-react";
 
 const AdminStaff = () => {
     const { admin } = useAdminAuth();
     const [staff, setStaff] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [flash, setFlash] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [togglingId, setTogglingId] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     const load = useCallback(async () => {
         try {
