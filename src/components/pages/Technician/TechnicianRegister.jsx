@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api, getErrorMessage } from "../../services/api";
 import { sendOtp, cleanupOtp, otpErrorMessage } from "../../services/firebase";
 import {
-    Eye, EyeOff, Hexagon, MapPin, CheckCircle2, AlertCircle,
+    Eye, EyeOff, MapPin, CheckCircle2, AlertCircle,
     Loader2, Truck, Phone, ArrowLeft, ArrowRight, Landmark,
     ShieldCheck, Navigation, Camera, User
 } from "lucide-react";
@@ -21,6 +21,10 @@ const STEPS = [
     { key: 3, label: "Work & Location" },
     { key: 4, label: "Bank" },
 ];
+
+import SplitCurve from "../../ui/SplitCurve";
+
+const LOGO = "https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959";
 
 const TechnicianRegister = () => {
     const navigate = useNavigate();
@@ -346,19 +350,19 @@ const TechnicianRegister = () => {
 
     if (submitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
-                <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8 text-center">
-                    <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                        <ShieldCheck className="w-7 h-7 text-amber-600" />
+            <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
+                <div className="w-full max-w-sm cg-lift p-8 text-center">
+                    <div className="w-14 h-14 rounded-full bg-warn-tint flex items-center justify-center mx-auto mb-4">
+                        <ShieldCheck className="w-7 h-7 text-warn" />
                     </div>
-                    <h1 className="text-xl font-bold text-gray-900 mb-2">Application submitted</h1>
-                    <p className="text-gray-500 text-sm mb-6">
+                    <h1 className="text-xl font-bold text-ink mb-2">Application submitted</h1>
+                    <p className="text-ink-soft text-sm mb-6">
                         The office will review your details. You'll be able to sign in with
                         your phone number once they approve it.
                     </p>
                     <Link
                         to="/technician/admin/login"
-                        className="block w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-lg text-sm"
+                        className="cg-btn cg-btn-go block w-full py-3"
                     >
                         Go to sign in
                     </Link>
@@ -368,107 +372,76 @@ const TechnicianRegister = () => {
     }
 
     return (
-        <div className="min-h-screen flex bg-white font-sans 2xl:text-lg">
+        <div className="min-h-screen bg-canvas lg:flex 2xl:text-lg">
+            <SplitCurve />
 
-            {/* LEFT PANEL - desktop only */}
-            <div className="hidden lg:flex lg:w-1/2 p-4 pr-0 sticky top-0 h-screen">
-                <div className="w-full h-full rounded-[2.5rem] bg-slate-900 relative overflow-hidden flex flex-col justify-center px-12 xl:px-20 2xl:px-32">
-                    <div
-                        className="absolute inset-0 opacity-20 z-0"
-                        style={{
-                            backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1px, transparent 0)",
-                            backgroundSize: "32px 32px",
-                        }}
-                    />
-                    <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-green-700/40 rounded-full mix-blend-screen filter blur-[120px] opacity-60 z-0" />
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-sky-700/40 rounded-full mix-blend-screen filter blur-[150px] opacity-60 z-0" />
 
-                    <div className="relative z-10 w-full max-w-2xl">
-                        <span className="block font-bold text-sky-400 text-sm 2xl:text-base tracking-widest uppercase mb-10">
-                            Cosmosgen Engineers Pvt. Ltd.
-                        </span>
-                        <h1 className="text-6xl xl:text-7xl 2xl:text-8xl font-extrabold text-white leading-[1.05] mb-2 tracking-tight">
-                            Work Near
-                        </h1>
-                        <h1 className="text-6xl xl:text-7xl 2xl:text-8xl font-extrabold text-white leading-[1.05] mb-8 tracking-tight">
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-sky-400">
-                                Home.
-                            </span>
-                        </h1>
-                        <p className="text-lg 2xl:text-xl text-sky-100/70 font-medium leading-relaxed max-w-xl">
-                            Jobs come to you based on where you are. Set your location once and
-                            the closest work reaches you first - no bidding, no waiting around,
-                            no travelling across the city for a small job.
-                        </p>
-
-                        {/* Dot style step indicator (Desktop) */}
-                        <div className="mt-16 w-full max-w-sm 2xl:max-w-md">
-                            <div className="flex items-center gap-2 mb-3">
-                                {STEPS.map((s) => (
-                                    <div key={s.key} className={`h-2 rounded-full transition-all duration-300 ${
-                                        step === s.key ? "w-8 bg-green-400" :
-                                        step > s.key ? "w-2.5 bg-green-500/60" :
-                                        "w-2.5 bg-white/20"
-                                    }`} />
-                                ))}
-                            </div>
-                            <div className="flex items-center gap-4 h-6">
-                                {STEPS.map((s) => (
-                                    step === s.key && (
-                                        <span key={s.key} className="text-white font-medium text-lg animate-fade-in block">
-                                            Step {s.key}: {s.label}
-                                        </span>
-                                    )
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* RIGHT PANEL - form */}
-            <div className="w-full lg:w-1/2 flex flex-col p-6 sm:p-8 lg:p-12 2xl:p-20 h-screen overflow-y-auto">
-
-                <div className="flex lg:hidden items-center gap-2 mb-6">
-                    <img 
-                        src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
-                        alt="Cosmosgen Logo" 
-                        className="h-8" 
-                    />
+            {/* THE PANEL - a column beside the form on a desktop, a lit band
+                above it on a phone. Folded, never dropped. */}
+            <aside className="cg-rich-dark cg-split-curve lg:w-[50%] xl:w-[52%] shrink-0 flex flex-col justify-between px-6 pt-8 pb-14 sm:px-10 lg:px-14 xl:px-20 lg:py-14 lg:sticky lg:top-0 lg:h-screen">
+                <div className="flex items-center gap-2.5">
+                    <img src={LOGO} alt="Cosmosgen" className="h-9 w-9 rounded-full bg-white p-[3px] object-contain" />
                     <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 text-lg leading-tight">Cosmosgen</span>
-                        <span className="text-[10px] text-gray-500 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
+                        <span className="font-display font-semibold text-[17px] tracking-tight leading-none text-white">
+                            Cosmosgen
+                        </span>
+                        <span className="text-[9px] text-white/40 uppercase tracking-[0.16em] leading-none mt-1">
+                            Engineers Pvt. Ltd.
+                        </span>
                     </div>
                 </div>
 
-                {/* Dot style step indicator (Mobile) */}
-                <div className="flex lg:hidden flex-col mb-10 mt-2 px-2">
-                    <div className="flex items-center gap-1.5 mb-2">
-                        {STEPS.map((s) => (
-                            <div key={s.key} className={`h-1.5 rounded-full transition-all duration-300 ${
-                                step === s.key ? "w-6 bg-green-700" :
-                                step > s.key ? "w-2 bg-green-600/50" :
-                                "w-2 bg-gray-200"
-                            }`} />
-                        ))}
-                    </div>
-                    <div className="h-5">
-                        {STEPS.map((s) => (
-                            step === s.key && (
-                                <span key={s.key} className="text-green-800 font-semibold text-sm animate-fade-in block">
-                                    {s.key}. {s.label}
-                                </span>
-                            )
-                        ))}
+                <div className="mt-7 lg:mt-0 lg:max-w-md">
+                    <span className="cg-pill bg-white/10 text-white/70 uppercase tracking-[0.14em] mb-4 hidden lg:inline-flex">
+                        Join as a vendor
+                    </span>
+
+                    <h2 className="font-display text-[1.75rem] sm:text-4xl lg:text-[3rem] xl:text-[3.4rem] font-semibold leading-[1.06] tracking-[-0.035em] text-white">
+                        Work near
+                        <span className="text-brand"> home.</span>
+                    </h2>
+
+                    <p className="mt-4 lg:mt-6 text-[13px] lg:text-[15px] text-white/60 leading-relaxed max-w-sm">
+                        Jobs come to you based on where you are. Set your location once and the
+                        closest work reaches you first. No bidding, no waiting around, and no
+                        travelling across the city for a small job.
+                    </p>
+
+                    {/* Where he is in the form, on the panel rather than above
+                        the fields - four steps is enough to make a person
+                        wonder how much is left. */}
+                    <div className="mt-6 lg:mt-9 rounded-2xl border border-white/10 bg-white/[0.07] px-5 py-4">
+                        <div className="flex items-center gap-1.5 mb-3">
+                            {STEPS.map((s) => (
+                                <div
+                                    key={s.key}
+                                    className={"h-1 rounded-full transition-all duration-300 " + (
+                                        step === s.key ? "w-10 bg-brand"
+                                            : step > s.key ? "w-6 bg-brand/40"
+                                                : "w-6 bg-white/15"
+                                    )}
+                                />
+                            ))}
+                        </div>
+                        <p className="cg-label text-white/35">Step {step} of {STEPS.length}</p>
+                        <p className="text-sm font-semibold text-white mt-1.5">
+                            {STEPS.map((s) => (step === s.key ? s.label : ""))}
+                        </p>
                     </div>
                 </div>
 
-                <div className="w-full max-w-sm 2xl:max-w-md mx-auto flex-1">
+                <p className="hidden lg:block text-xs text-white/30">© Cosmosgen 2026</p>
+            </aside>
+
+            {/* THE FORM */}
+            <main className="flex-1 flex flex-col items-center justify-center px-4 py-10 sm:px-8 lg:min-h-screen lg:py-14">
+                <div className="w-full max-w-md">
+                    <div className="cg-card w-full px-6 py-7 sm:px-8 sm:py-9">
 
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 2xl:w-5 2xl:h-5 text-red-600 shrink-0 mt-0.5" />
-                            <p className="text-sm 2xl:text-base text-red-700">{error}</p>
+                        <div className="mb-4 p-3 bg-danger-tint border border-hairline rounded-lg flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 2xl:w-5 2xl:h-5 text-danger shrink-0 mt-0.5" />
+                            <p className="text-sm 2xl:text-base text-danger">{error}</p>
                         </div>
                     )}
 
@@ -476,10 +449,10 @@ const TechnicianRegister = () => {
                     {step === 1 && (
                         <>
                             <div className="mb-6 2xl:mb-8">
-                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
-                                    {confirmation ? "Enter the code" : "Join as a technician"}
+                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-ink mb-2 tracking-tight">
+                                    {confirmation ? "Enter the code" : "Join as a vendor"}
                                 </h1>
-                                <p className="text-gray-500 text-sm 2xl:text-base">
+                                <p className="text-ink-soft text-sm 2xl:text-base">
                                     {confirmation
                                         ? "We sent a 6-digit code to +91 " + phone
                                         : "We'll send a code to confirm your number."}
@@ -488,11 +461,11 @@ const TechnicianRegister = () => {
 
                             {!confirmation ? (
                                 <>
-                                    <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">
+                                    <label className="cg-label block mb-2">
                                         Mobile number
                                     </label>
                                     <div className="relative mb-1">
-                                        <span className="absolute left-3.5 2xl:left-4 top-1/2 -translate-y-1/2 text-sm 2xl:text-base text-gray-500 font-medium">
+                                        <span className="absolute left-3.5 2xl:left-4 top-1/2 -translate-y-1/2 text-sm 2xl:text-base text-ink-soft font-medium">
                                             +91
                                         </span>
                                         <input
@@ -502,17 +475,17 @@ const TechnicianRegister = () => {
                                             value={phone}
                                             onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }}
                                             placeholder="9876543210"
-                                            className="w-full pl-12 pr-3.5 py-3 2xl:py-4 2xl:pl-14 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700"
+                                            className="cg-input pl-12 pr-3.5 py-3 2xl:py-4 2xl:pl-14 text-base 2xl:text-lg"
                                         />
                                     </div>
-                                    <p className="text-xs 2xl:text-sm text-gray-400 mb-5 2xl:mb-8">
+                                    <p className="text-xs 2xl:text-sm text-ink-faint mb-5 2xl:mb-8">
                                         You'll sign in with this number later.
                                     </p>
 
                                     <button
                                         onClick={handleSendOtp}
                                         disabled={busy || phone.length !== 10}
-                                        className="w-full flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white font-semibold py-3 2xl:py-4 rounded-lg text-sm 2xl:text-base transition-colors"
+                                        className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base"
                                     >
                                         {busy ? <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin" /> : <Phone className="w-4 h-4 2xl:w-5 2xl:h-5" />}
                                         Send code
@@ -520,7 +493,7 @@ const TechnicianRegister = () => {
                                 </>
                             ) : (
                                 <>
-                                    <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">
+                                    <label className="cg-label block mb-2">
                                         6-digit code
                                     </label>
                                     <input
@@ -531,13 +504,13 @@ const TechnicianRegister = () => {
                                         value={otp}
                                         onChange={(e) => { setOtp(e.target.value.replace(/\D/g, "")); setError(""); }}
                                         placeholder="123456"
-                                        className="w-full px-3.5 py-3 2xl:py-4 border border-gray-300 rounded-lg text-center text-2xl 2xl:text-3xl font-bold tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-4 2xl:mb-6"
+                                        className="cg-input py-3 2xl:py-4 text-center text-2xl 2xl:text-3xl font-bold tracking-[0.4em] mb-4 2xl:mb-6"
                                     />
 
                                     <button
                                         onClick={handleVerifyOtp}
                                         disabled={busy || otp.length !== 6}
-                                        className="w-full flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white font-semibold py-3 2xl:py-4 rounded-lg text-sm 2xl:text-base mb-3 transition-colors"
+                                        className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base mb-3"
                                     >
                                         {busy ? <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin" /> : <ShieldCheck className="w-4 h-4 2xl:w-5 2xl:h-5" />}
                                         Verify
@@ -546,14 +519,14 @@ const TechnicianRegister = () => {
                                     <div className="flex items-center justify-between text-sm 2xl:text-base">
                                         <button
                                             onClick={() => { setConfirmation(null); setOtp(""); setError(""); cleanupOtp(); }}
-                                            className="text-gray-500 hover:text-gray-700 font-medium"
+                                            className="text-ink-soft hover:text-ink font-medium"
                                         >
                                             Change number
                                         </button>
                                         <button
                                             onClick={handleSendOtp}
                                             disabled={resendIn > 0 || busy}
-                                            className="text-green-700 hover:text-green-800 font-semibold disabled:text-gray-400"
+                                            className="text-accent hover:text-accent-deep font-semibold disabled:text-ink-faint"
                                         >
                                             {resendIn > 0 ? "Resend in " + resendIn + "s" : "Resend code"}
                                         </button>
@@ -569,18 +542,18 @@ const TechnicianRegister = () => {
                     {step === 2 && (
                         <>
                             <div className="mb-6 2xl:mb-8">
-                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-ink mb-2 tracking-tight">
                                     Personal details
                                 </h1>
-                                <p className="text-gray-500 text-sm 2xl:text-base flex items-center gap-1.5">
-                                    <CheckCircle2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-green-600" />
+                                <p className="text-ink-soft text-sm 2xl:text-base flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-brand" />
                                     +91 {phone} verified
                                 </p>
                             </div>
                             
                             {/* Photo Upload */}
                             <div className="flex flex-col items-center mb-8 2xl:mb-10">
-                                <label className="relative flex flex-col items-center justify-center w-24 h-24 2xl:w-28 2xl:h-28 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 hover:border-green-500 hover:bg-gray-100 transition-colors cursor-pointer overflow-hidden group">
+                                <label className="relative flex flex-col items-center justify-center w-24 h-24 2xl:w-28 2xl:h-28 rounded-full bg-sunken border-2 border-dashed border-hairline-strong hover:border-accent hover:bg-accent-tint transition-colors cursor-pointer overflow-hidden group">
                                     {profileImagePreview ? (
                                         <>
                                             <img src={profileImagePreview} alt="Profile preview" className="w-full h-full object-cover" />
@@ -590,7 +563,7 @@ const TechnicianRegister = () => {
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="flex flex-col items-center text-gray-400 group-hover:text-green-600 transition-colors">
+                                        <div className="flex flex-col items-center text-ink-faint group-hover:text-brand transition-colors">
                                             <User className="w-8 h-8 2xl:w-10 2xl:h-10 mb-1" />
                                             <span className="text-[10px] font-medium uppercase tracking-wider">Photo</span>
                                         </div>
@@ -604,17 +577,17 @@ const TechnicianRegister = () => {
                                 </label>
                             </div>
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">Full name</label>
+                            <label className="cg-label block mb-2">Full name</label>
                             <input
                                 type="text"
                                 name="name"
                                 value={form.name}
                                 onChange={handleFormChange}
                                 placeholder="Your full name"
-                                className="w-full px-3.5 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-4 2xl:mb-6"
+                                className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg mb-4 2xl:mb-6"
                             />
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">Password</label>
+                            <label className="cg-label block mb-2">Password</label>
                             <div className="relative mb-1">
                                 <input
                                     type={showPassword ? "text" : "password"}
@@ -622,20 +595,20 @@ const TechnicianRegister = () => {
                                     value={form.password}
                                     onChange={handleFormChange}
                                     placeholder="At least 6 characters"
-                                    className="w-full pl-3.5 pr-10 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700"
+                                    className="cg-input pl-3.5 pr-10 py-3 2xl:py-4 text-base 2xl:text-lg"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-faint hover:text-ink-soft"
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4 2xl:w-5 2xl:h-5" /> : <Eye className="h-4 w-4 2xl:w-5 2xl:h-5" />}
                                 </button>
                             </div>
-                            <p className="text-xs 2xl:text-sm text-gray-400 mb-4 2xl:mb-6">You'll use this with your number to sign in.</p>
+                            <p className="text-xs 2xl:text-sm text-ink-faint mb-4 2xl:mb-6">You'll use this with your number to sign in.</p>
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">
-                                Email <span className="font-normal text-gray-400">(optional)</span>
+                            <label className="cg-label block mb-2">
+                                Email <span className="font-normal text-ink-faint">(optional)</span>
                             </label>
                             <input
                                 type="email"
@@ -643,13 +616,13 @@ const TechnicianRegister = () => {
                                 value={form.email}
                                 onChange={handleFormChange}
                                 placeholder="you@example.com"
-                                className="w-full px-3.5 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-6 2xl:mb-8"
+                                className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg mb-6 2xl:mb-8"
                             />
 
                             <button
                                 onClick={goToWorkLocation}
                                 disabled={!personalComplete}
-                                className="w-full flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white font-semibold py-3 2xl:py-4 rounded-lg text-sm 2xl:text-base transition-colors"
+                                className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base"
                             >
                                 Continue to work & location
                                 <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
@@ -662,22 +635,22 @@ const TechnicianRegister = () => {
                         <>
                             <button
                                 onClick={() => { setStep(2); setError(""); }}
-                                className="flex items-center gap-1.5 text-sm 2xl:text-base text-gray-500 hover:text-gray-700 font-medium mb-4 2xl:mb-6 transition-colors"
+                                className="flex items-center gap-1.5 text-sm 2xl:text-base text-ink-soft hover:text-ink font-medium mb-4 2xl:mb-6 transition-colors"
                             >
                                 <ArrowLeft className="w-4 h-4 2xl:w-5 2xl:h-5" />
                                 Back to personal details
                             </button>
 
                             <div className="mb-6 2xl:mb-8">
-                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-ink mb-2 tracking-tight">
                                     Work & Location
                                 </h1>
-                                <p className="text-gray-500 text-sm 2xl:text-base">
+                                <p className="text-ink-soft text-sm 2xl:text-base">
                                     Tell us what you do and where you can work.
                                 </p>
                             </div>
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-2 2xl:mb-3">
+                            <label className="cg-label block mb-2.5">
                                 What work do you do?
                             </label>
                             <div className="space-y-2 mb-5 2xl:mb-8">
@@ -686,21 +659,21 @@ const TechnicianRegister = () => {
                                         key={skill}
                                         type="button"
                                         onClick={() => toggleSkill(skill)}
-                                        className={"w-full flex items-center gap-2.5 2xl:gap-3 p-3.5 2xl:p-4 rounded-xl border-2 text-left transition-colors " + (form.skills.includes(skill) ? "border-green-600 bg-green-50" : "border-gray-200")}
+                                        className={"w-full flex items-center gap-2.5 2xl:gap-3 p-3.5 2xl:p-4 rounded-xl border-2 text-left transition-colors " + (form.skills.includes(skill) ? "border-green-600 bg-brand-tint" : "border-hairline")}
                                     >
-                                        <div className={"w-5 h-5 2xl:w-6 2xl:h-6 rounded border-2 flex items-center justify-center shrink-0 " + (form.skills.includes(skill) ? "bg-green-600 border-green-600" : "border-gray-300")}>
+                                        <div className={"w-5 h-5 2xl:w-6 2xl:h-6 rounded border-2 flex items-center justify-center shrink-0 " + (form.skills.includes(skill) ? "bg-brand border-green-600" : "border-hairline-strong")}>
                                             {form.skills.includes(skill) && <CheckCircle2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-white" />}
                                         </div>
-                                        <span className="text-sm 2xl:text-base font-medium text-gray-900">{skill}</span>
+                                        <span className="text-sm 2xl:text-base font-medium text-ink">{skill}</span>
                                     </button>
                                 ))}
                             </div>
 
                             <div className="mb-4 2xl:mb-6">
-                                <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">Search Area / Location</label>
+                                <label className="cg-label block mb-2">Search Area / Location</label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                                        <MapPin className="h-4 w-4 2xl:w-5 2xl:h-5 text-gray-400" />
+                                        <MapPin className="h-4 w-4 2xl:w-5 2xl:h-5 text-ink-faint" />
                                     </div>
                                     <input
                                         type="text"
@@ -708,27 +681,27 @@ const TechnicianRegister = () => {
                                         onChange={handleAreaChange}
                                         onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                                         placeholder="Type your area (e.g. Patia, Bhubaneswar)"
-                                        className="w-full pl-9 pr-10 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700"
+                                        className="cg-input pl-9 pr-10 py-3 2xl:py-4 text-base 2xl:text-lg"
                                     />
                                     {isSearchingLoc && (
                                         <div className="absolute inset-y-0 right-3 flex items-center">
-                                            <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin text-green-600" />
+                                            <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin text-brand" />
                                         </div>
                                     )}
 
                                     {showSuggestions && suggestions.length > 0 && (
-                                        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                        <ul className="absolute z-50 w-full mt-1 cg-card shadow-lg max-h-60 overflow-auto">
                                             {suggestions.map((place, idx) => (
                                                 <li
                                                     key={idx}
                                                     onClick={() => handleSelectLocation(place)}
-                                                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 flex items-start gap-3"
+                                                    className="px-4 py-3 hover:bg-sunken cursor-pointer border-b border-hairline last:border-0 flex items-start gap-3"
                                                 >
-                                                    <MapPin className="w-4 h-4 2xl:w-5 2xl:h-5 text-gray-400 mt-1 shrink-0" />
+                                                    <MapPin className="w-4 h-4 2xl:w-5 2xl:h-5 text-ink-faint mt-1 shrink-0" />
                                                     <div>
-                                                        <p className="text-sm 2xl:text-base font-medium text-gray-900">{place.label || place.area}</p>
+                                                        <p className="text-sm 2xl:text-base font-medium text-ink">{place.label || place.area}</p>
                                                         {(place.state || place.pincode) && (
-                                                            <p className="text-xs 2xl:text-sm text-gray-500 mt-0.5">
+                                                            <p className="text-xs 2xl:text-sm text-ink-soft mt-0.5">
                                                                 {[place.state, place.pincode].filter(Boolean).join(', ')}
                                                             </p>
                                                         )}
@@ -742,7 +715,7 @@ const TechnicianRegister = () => {
                                     <button 
                                         type="button" 
                                         onClick={handleGpsLocation}
-                                        className="inline-flex items-center gap-1.5 text-xs 2xl:text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
+                                        className="inline-flex items-center gap-1.5 text-xs 2xl:text-sm font-medium text-brand hover:text-brand transition-colors"
                                     >
                                         {locationStatus === 'requesting' ? (
                                             <Loader2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 animate-spin" />
@@ -758,17 +731,17 @@ const TechnicianRegister = () => {
 
                             <div className="grid grid-cols-2 gap-3 mb-4 2xl:mb-6">
                                 <div>
-                                    <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">State</label>
+                                    <label className="cg-label block mb-2">State</label>
                                     <input
                                         type="text"
                                         name="state"
                                         value={form.state}
                                         onChange={handleFormChange}
-                                        className="w-full px-3.5 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 bg-gray-50"
+                                        className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg bg-sunken"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">Pincode</label>
+                                    <label className="cg-label block mb-2">Pincode</label>
                                     <input
                                         type="text"
                                         inputMode="numeric"
@@ -776,12 +749,12 @@ const TechnicianRegister = () => {
                                         value={form.pincode}
                                         onChange={handleFormChange}
                                         placeholder="751024"
-                                        className="w-full px-3.5 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 bg-gray-50"
+                                        className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg bg-sunken"
                                     />
                                 </div>
                             </div>
 
-                            <label className="flex items-center gap-2.5 2xl:gap-3 p-3.5 2xl:p-4 rounded-xl border border-gray-200 cursor-pointer mb-6 2xl:mb-8 hover:bg-gray-50 transition-colors">
+                            <label className="flex items-center gap-2.5 2xl:gap-3 p-3.5 2xl:p-4 rounded-xl border border-hairline cursor-pointer mb-6 2xl:mb-8 hover:bg-sunken transition-colors">
                                 <input
                                     type="checkbox"
                                     name="hasVehicle"
@@ -789,14 +762,14 @@ const TechnicianRegister = () => {
                                     onChange={handleFormChange}
                                     className="w-4 h-4 2xl:w-5 2xl:h-5 accent-green-600"
                                 />
-                                <Truck className="w-4 h-4 2xl:w-5 2xl:h-5 text-gray-400" />
-                                <span className="text-sm 2xl:text-base text-gray-700">I have my own vehicle</span>
+                                <Truck className="w-4 h-4 2xl:w-5 2xl:h-5 text-ink-faint" />
+                                <span className="text-sm 2xl:text-base text-ink">I have my own vehicle</span>
                             </label>
 
                             <button
                                 onClick={goToBank}
                                 disabled={!workComplete}
-                                className="w-full flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white font-semibold py-3 2xl:py-4 rounded-lg text-sm 2xl:text-base transition-colors"
+                                className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base"
                             >
                                 Continue to bank details
                                 <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
@@ -809,22 +782,22 @@ const TechnicianRegister = () => {
                         <>
                             <button
                                 onClick={() => { setStep(3); setError(""); }}
-                                className="flex items-center gap-1.5 text-sm 2xl:text-base text-gray-500 hover:text-gray-700 font-medium mb-4 2xl:mb-6 transition-colors"
+                                className="flex items-center gap-1.5 text-sm 2xl:text-base text-ink-soft hover:text-ink font-medium mb-4 2xl:mb-6 transition-colors"
                             >
                                 <ArrowLeft className="w-4 h-4 2xl:w-5 2xl:h-5" />
                                 Back to work & location
                             </button>
 
                             <div className="mb-6 2xl:mb-8">
-                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-ink mb-2 tracking-tight">
                                     Bank details
                                 </h1>
-                                <p className="text-gray-500 text-sm 2xl:text-base">
+                                <p className="text-ink-soft text-sm 2xl:text-base">
                                     This is where your earnings from online jobs get paid.
                                 </p>
                             </div>
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">
+                            <label className="cg-label block mb-2">
                                 Account holder name
                             </label>
                             <input
@@ -833,10 +806,10 @@ const TechnicianRegister = () => {
                                 value={bank.accountHolderName}
                                 onChange={handleBankChange}
                                 placeholder="Exactly as it appears on the passbook"
-                                className="w-full px-3.5 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-4 2xl:mb-6"
+                                className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg mb-4 2xl:mb-6"
                             />
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">
+                            <label className="cg-label block mb-2">
                                 Account number
                             </label>
                             <input
@@ -846,10 +819,10 @@ const TechnicianRegister = () => {
                                 value={bank.accountNumber}
                                 onChange={handleBankChange}
                                 placeholder="Your bank account number"
-                                className="w-full px-3.5 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 mb-3 2xl:mb-4"
+                                className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg mb-3 2xl:mb-4"
                             />
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">
+                            <label className="cg-label block mb-2">
                                 Confirm account number
                             </label>
                             <input
@@ -859,14 +832,14 @@ const TechnicianRegister = () => {
                                 value={bank.confirmAccountNumber}
                                 onChange={handleBankChange}
                                 placeholder="Type it again"
-                                className={"w-full px-3.5 py-3 2xl:py-4 border rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 mb-1 " + (bank.confirmAccountNumber && !accountsMatch ? "border-red-300 focus:ring-red-200 focus:border-red-400" : "border-gray-300 focus:ring-green-700/20 focus:border-green-700")}
+                                className={"w-full px-3.5 py-3 2xl:py-4 border rounded-lg text-base 2xl:text-lg focus:outline-none focus:ring-2 mb-1 " + (bank.confirmAccountNumber && !accountsMatch ? "border-red-300 focus:ring-red-200 focus:border-red-400" : "border-hairline-strong focus:ring-brand/15 focus:border-brand")}
                             />
                             {bank.confirmAccountNumber && !accountsMatch && (
-                                <p className="text-xs 2xl:text-sm text-red-600 mb-3">The two numbers don't match.</p>
+                                <p className="text-xs 2xl:text-sm text-danger mb-3">The two numbers don't match.</p>
                             )}
                             {accountsMatch && <div className="mb-3 2xl:mb-4" />}
 
-                            <label className="block text-sm 2xl:text-base font-semibold text-gray-700 mb-1.5 2xl:mb-2">IFSC code</label>
+                            <label className="cg-label block mb-2">IFSC code</label>
                             <div className="relative">
                                 <input
                                     type="text"
@@ -875,31 +848,31 @@ const TechnicianRegister = () => {
                                     value={bank.ifsc}
                                     onChange={handleBankChange}
                                     placeholder="SBIN0001234"
-                                    className="w-full px-3.5 pr-10 py-3 2xl:py-4 border border-gray-300 rounded-lg text-base 2xl:text-lg uppercase focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700"
+                                    className="cg-input pr-10 py-3 2xl:py-4 text-base 2xl:text-lg uppercase"
                                 />
                                 {checkingIfsc && (
-                                    <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 text-gray-400 animate-spin absolute right-3.5 top-1/2 -translate-y-1/2" />
+                                    <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 text-ink-faint animate-spin absolute right-3.5 top-1/2 -translate-y-1/2" />
                                 )}
                             </div>
 
                             {bankInfo ? (
-                                <div className="mt-2 p-3.5 2xl:p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-2.5 mb-5 2xl:mb-8">
-                                    <Landmark className="w-4 h-4 2xl:w-5 2xl:h-5 text-green-700 shrink-0 mt-0.5" />
+                                <div className="mt-2 p-3.5 2xl:p-4 bg-brand-tint border border-hairline rounded-xl flex items-start gap-2.5 mb-5 2xl:mb-8">
+                                    <Landmark className="w-4 h-4 2xl:w-5 2xl:h-5 text-brand shrink-0 mt-0.5" />
                                     <div className="min-w-0">
                                         <p className="text-sm 2xl:text-base font-semibold text-green-900">{bankInfo.bank}</p>
-                                        <p className="text-xs 2xl:text-sm text-green-700 mt-0.5">
+                                        <p className="text-xs 2xl:text-sm text-brand mt-0.5">
                                             {bankInfo.branch}, {bankInfo.city}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-xs 2xl:text-sm text-gray-400 mt-1.5 mb-5 2xl:mb-8">
+                                <p className="text-xs 2xl:text-sm text-ink-faint mt-1.5 mb-5 2xl:mb-8">
                                     11 characters, printed on your cheque book and passbook.
                                 </p>
                             )}
 
-                            <div className="p-3.5 2xl:p-4 bg-blue-50 border border-blue-200 rounded-xl mb-5 2xl:mb-8">
-                                <p className="text-xs 2xl:text-sm text-blue-800">
+                            <div className="p-3.5 2xl:p-4 bg-info-tint border border-hairline rounded-xl mb-5 2xl:mb-8">
+                                <p className="text-xs 2xl:text-sm text-info">
                                     Cash jobs stay with you and only the commission is charged.
                                     Online jobs are paid into this account.
                                 </p>
@@ -908,7 +881,7 @@ const TechnicianRegister = () => {
                             <button
                                 onClick={handleSubmit}
                                 disabled={busy || !bankComplete}
-                                className="w-full flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white font-semibold py-3 2xl:py-4 rounded-lg text-sm 2xl:text-base transition-colors"
+                                className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base"
                             >
                                 {busy && <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin" />}
                                 Submit application
@@ -917,22 +890,23 @@ const TechnicianRegister = () => {
                     )}
 
                     {step === 1 && (
-                        <p className="text-center text-sm 2xl:text-base text-gray-500 mt-6 2xl:mt-8">
+                        <p className="text-center text-sm 2xl:text-base text-ink-soft mt-6 2xl:mt-8">
                             Already have an account?{" "}
-                            <Link to="/technician/admin/login" className="text-green-700 font-semibold hover:text-green-800">
+                            <Link to="/technician/admin/login" className="text-accent font-semibold hover:text-accent-deep">
                                 Sign in
                             </Link>
                         </p>
                     )}
                 </div>
 
-                <div className="flex justify-between items-center text-xs 2xl:text-sm text-gray-400 mt-8 2xl:mt-12 font-medium max-w-sm 2xl:max-w-md mx-auto w-full">
+                <div className="flex justify-between items-center text-xs text-ink-faint mt-7 font-medium w-full">
                     <p>© Cosmosgen 2026</p>
-                    <a href="mailto:support@cosmosgen.com" className="hover:text-gray-600 transition-colors">
+                    <a href="mailto:support@cosmosgen.com" className="hover:text-ink-soft transition-colors">
                         support@cosmosgen.com
                     </a>
                 </div>
-            </div>
+                </div>
+            </main>
         </div>
     );
 };

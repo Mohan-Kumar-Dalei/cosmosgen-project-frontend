@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import { useAdminAuth } from "../Admin/adminAuthContext";
@@ -12,28 +12,34 @@ import {
 
 const StatCard = ({ label, value, sub, icon: Icon, tone = "gray" }) => {
     const tones = {
-        gray: "bg-gray-100 text-gray-700",
-        amber: "bg-amber-100 text-amber-700",
-        green: "bg-green-100 text-green-700",
-        blue: "bg-blue-100 text-blue-700",
+        gray: "bg-sunken text-ink",
+        amber: "bg-warn-tint text-warn",
+        green: "bg-brand-tint text-brand",
+        blue: "bg-info-tint text-info",
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="cg-card p-5">
             <div className="flex items-start justify-between mb-3">
-                <span className="text-sm font-medium text-gray-500">{label}</span>
+                <span className="text-sm font-medium text-ink-soft">{label}</span>
                 <div className={"p-2 rounded-lg " + tones[tone]}>
                     <Icon className="w-4 h-4" />
                 </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900 tracking-tight">{value}</p>
-            {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+            <p className="text-3xl font-bold text-ink tracking-tight">{value}</p>
+            {sub && <p className="text-xs text-ink-faint mt-1">{sub}</p>}
         </div>
     );
 };
 
 const AdminDashboard = () => {
     const { admin, hasPermission } = useAdminAuth();
+
+    // These used to point at bare "/admin/..." paths, so every click landed on
+    // a URL without the admin id and AdminLayout rewrote it afterwards - which
+    // is how the cash card ended up on /wallets instead of the payments tab it
+    // was actually opening.
+    const base = admin?._id ? "/admin/" + admin._id : "/admin";
     const { globalRefreshTrigger } = useAdminData();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -60,7 +66,6 @@ const AdminDashboard = () => {
         isMountedRef.current = true;
         loadStats();
 
-        const interval = setInterval(loadStats, 30000);
 
         connectAdminSocket();
         const refresh = () => loadStats();
@@ -73,7 +78,6 @@ const AdminDashboard = () => {
 
         return () => {
             isMountedRef.current = false;
-            clearInterval(interval);
             adminSocket.off("ticket:new", refresh);
             adminSocket.off("ticket:taken", refresh);
             adminSocket.off("ticket:cancelled", refresh);
@@ -81,20 +85,20 @@ const AdminDashboard = () => {
             adminSocket.off("payment:collected", refresh);
             adminSocket.off("tech:status", refresh);
         };
-    }, [loadStats]);
+    }, [loadStats, globalRefreshTrigger]);
 
     const activeJobs = stats ? stats.tickets.assigned + stats.tickets.inProgress : 0;
 
     return (
         <AdminLayout>
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                <h1 className="cg-h1">
                     Welcome back, {admin?.name?.split(" ")[0]}
                 </h1>
-                <p className="text-gray-500 text-sm mt-1">
+                <p className="cg-sub mt-1">
                     Today's service requests and team status
                     {lastUpdated && (
-                        <span className="text-gray-400">
+                        <span className="text-ink-faint">
                             {" "}· updated {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                     )}
@@ -102,11 +106,11 @@ const AdminDashboard = () => {
             </div>
 
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <div className="mb-6 p-4 bg-danger-tint border border-hairline rounded-xl flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
                     <div>
-                        <p className="text-sm font-semibold text-red-800">{error}</p>
-                        <p className="text-xs text-red-600 mt-1">Retrying automatically.</p>
+                        <p className="text-sm font-semibold text-danger">{error}</p>
+                        <p className="text-xs text-danger mt-1">Retrying automatically.</p>
                     </div>
                 </div>
             )}
@@ -114,7 +118,7 @@ const AdminDashboard = () => {
             {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 h-32 animate-pulse" />
+                        <div key={i} className="cg-card p-5 h-32 animate-pulse" />
                     ))}
                 </div>
             ) : stats ? (
@@ -124,7 +128,7 @@ const AdminDashboard = () => {
                             label="New requests"
                             value={stats.tickets.pending}
                             sub={stats.tickets.rejected > 0
-                                ? stats.tickets.rejected + " came back from a technician"
+                                ? stats.tickets.rejected + " came back from a vendor"
                                 : "Waiting to be assigned"}
                             icon={Clock}
                             tone="amber"
@@ -144,7 +148,7 @@ const AdminDashboard = () => {
                             tone="gray"
                         />
                         <StatCard
-                            label="Technicians free"
+                            label="Vendors free"
                             value={stats.technicians.available}
                             sub={stats.technicians.total + " total, " + stats.technicians.onJob + " on a job"}
                             icon={Users}
@@ -154,25 +158,25 @@ const AdminDashboard = () => {
 
                     {stats.tickets.pending > 0 ? (
                         <Link
-                            to="/admin/tickets"
-                            className="block bg-amber-50 border border-amber-200 rounded-xl p-5 hover:bg-amber-100 transition-colors"
+                            to={base + "/tickets"}
+                            className="block bg-warn-tint border border-hairline rounded-xl p-5 hover:bg-warn-tint transition-colors"
                         >
                             <div className="flex items-center justify-between gap-4">
                                 <div>
-                                    <p className="font-semibold text-amber-900">
+                                    <p className="font-semibold text-warn">
                                         {stats.tickets.pending} request{stats.tickets.pending > 1 ? "s" : ""} waiting
                                     </p>
-                                    <p className="text-sm text-amber-700 mt-0.5">
-                                        Open the queue to assign a technician
+                                    <p className="text-sm text-warn mt-0.5">
+                                        Open the queue to assign a vendor
                                     </p>
                                 </div>
-                                <ArrowRight className="w-5 h-5 text-amber-700 shrink-0" />
+                                <ArrowRight className="w-5 h-5 text-warn shrink-0" />
                             </div>
                         </Link>
                     ) : (
-                        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-                            <p className="font-semibold text-gray-900">No requests waiting</p>
-                            <p className="text-sm text-gray-500 mt-1">
+                        <div className="cg-card p-8 text-center">
+                            <p className="font-semibold text-ink">No requests waiting</p>
+                            <p className="text-sm text-ink-soft mt-1">
                                 New requests appear here as soon as they arrive.
                             </p>
                         </div>
@@ -180,8 +184,8 @@ const AdminDashboard = () => {
 
                     {stats.tickets.paymentPending > 0 && (
                         <Link
-                            to="/admin/payments"
-                            className="block mt-4 bg-purple-50 border border-purple-200 rounded-xl p-5 hover:bg-purple-100 transition-colors"
+                            to={base + "/payments?tab=upi"}
+                            className="block mt-4 bg-purple-50 border border-purple-200 rounded-xl p-5 hover:bg-info-tint transition-colors"
                         >
                             <div className="flex items-center justify-between gap-4">
                                 <div>
@@ -197,8 +201,8 @@ const AdminDashboard = () => {
 
                     {hasPermission("VERIFY_PAYMENT") && stats.awaitingReconcile?.count > 0 && (
                         <Link
-                            to="/admin/payments"
-                            className="block mt-4 bg-slate-900 text-white rounded-xl p-5 hover:bg-slate-800 transition-colors"
+                            to={base + "/payments"}
+                            className="block mt-4 bg-ink text-white rounded-xl p-5 hover:bg-black transition-colors"
                         >
                             <div className="flex items-center justify-between gap-4">
                                 <div>
@@ -214,23 +218,24 @@ const AdminDashboard = () => {
                         </Link>
                     )}
 
-                    {/* Cash never reached the company account, so chasing it is a
-                        Wallets job - the Payments page has nothing to do with it */}
+                    {/* Cash never reached the company account, so chasing it
+                        means settling the technician's balance - the
+                        Technicians tab of the same Payments screen */}
                     {hasPermission("VIEW_WALLETS") && stats.cashWithTechnicians?.count > 0 && (
                         <Link
-                            to="/admin/wallets"
-                            className="block mt-4 bg-amber-50 border border-amber-200 rounded-xl p-5 hover:bg-amber-100 transition-colors"
+                            to={base + "/payments?tab=wallet"}
+                            className="block mt-4 bg-warn-tint border border-hairline rounded-xl p-5 hover:bg-warn-tint transition-colors"
                         >
                             <div className="flex items-center justify-between gap-4">
                                 <div>
-                                    <p className="font-semibold text-amber-900">
-                                        Rs {stats.cashWithTechnicians.amountDisplay} collected in cash
+                                    <p className="font-semibold text-warn">
+                                        Rs {stats.cashWithTechnicians.amountDisplay} to collect from vendors
                                     </p>
-                                    <p className="text-sm text-amber-700 mt-0.5">
-                                        Commission on {stats.cashWithTechnicians.count} job{stats.cashWithTechnicians.count > 1 ? "s" : ""} still with technicians
+                                    <p className="text-sm text-warn mt-0.5">
+                                        Commission on {stats.cashWithTechnicians.count} cash job{stats.cashWithTechnicians.count > 1 ? "s" : ""}
                                     </p>
                                 </div>
-                                <Banknote className="w-5 h-5 text-amber-700 shrink-0" />
+                                <Banknote className="w-5 h-5 text-warn shrink-0" />
                             </div>
                         </Link>
                     )}

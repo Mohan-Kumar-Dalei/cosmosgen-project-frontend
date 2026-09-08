@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { api, getErrorMessage } from "../services/api";
 import { socket, connectSocket, disconnectSocket } from "../services/socket";
 import {
-    Hexagon, Send, MapPin, Loader2, AlertCircle, CheckCircle2,
+    Send, MapPin, Loader2, AlertCircle, CheckCircle2,
     Snowflake, Zap, Wrench, Sparkles, ChevronRight,
 } from "lucide-react";
 
@@ -22,8 +22,8 @@ const SERVICES = [
 /* ================================================================== */
 
 const PhoneFrame = ({ children }) => (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 py-6 px-4">
-        <div className="w-full max-w-[400px] h-[820px] max-h-[92vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border-8 border-slate-900">
+    <div className="min-h-screen flex items-center justify-center bg-sunken py-6 px-4">
+        <div className="w-full max-w-[400px] h-[820px] max-h-[92vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border-8 border-ink">
             {children}
         </div>
     </div>
@@ -89,7 +89,7 @@ const RegisterStep = ({ onRegistered }) => {
     };
 
     return (
-        <div className="flex-1 flex items-center justify-center bg-slate-900 px-6">
+        <div className="flex-1 flex items-center justify-center bg-ink px-6">
             <div className="w-full">
                 <div className="flex items-center gap-2 mb-6">
                     <img 
@@ -109,7 +109,7 @@ const RegisterStep = ({ onRegistered }) => {
                 </p>
 
                 {error && (
-                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-300">
+                    <div className="mb-4 p-3 bg-danger/10 border border-danger/30 rounded-lg text-sm text-danger">
                         {error}
                     </div>
                 )}
@@ -174,7 +174,7 @@ const RegisterStep = ({ onRegistered }) => {
                     <button
                         type="submit"
                         disabled={isLoading || !coords}
-                        className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
+                        className="cg-btn cg-btn-go w-full"
                     >
                         {isLoading ? "Starting..." : "Continue"}
                     </button>
@@ -190,7 +190,7 @@ const RegisterStep = ({ onRegistered }) => {
 
 const ServicePickerStep = ({ user, onSelect }) => (
     <div className="flex-1 flex flex-col bg-[#e5ddd5]">
-        <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-2 shrink-0">
+        <div className="bg-ink text-white px-4 py-3 flex items-center gap-2 shrink-0">
             <img 
                 src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
                 alt="Cosmosgen" 
@@ -204,7 +204,7 @@ const ServicePickerStep = ({ user, onSelect }) => (
 
         <div className="flex-1 overflow-y-auto p-4">
             <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 mb-4 shadow-sm max-w-[90%]">
-                <p className="text-sm text-gray-800">
+                <p className="text-sm text-ink">
                     Welcome to Cosmosgen! What can we help you with today?
                 </p>
             </div>
@@ -214,16 +214,16 @@ const ServicePickerStep = ({ user, onSelect }) => (
                     <button
                         key={s.key}
                         onClick={() => onSelect(s)}
-                        className="w-full flex items-center gap-3 bg-white p-3.5 rounded-xl shadow-sm hover:shadow-md hover:bg-green-50 transition-all text-left"
+                        className="w-full flex items-center gap-3 bg-white p-3.5 rounded-xl shadow-sm hover:shadow-md hover:bg-brand-tint transition-all text-left"
                     >
-                        <div className="bg-green-100 p-2.5 rounded-full shrink-0">
-                            <s.icon className="w-4.5 h-4.5 text-green-700" />
+                        <div className="bg-brand-tint p-2.5 rounded-full shrink-0">
+                            <s.icon className="w-4.5 h-4.5 text-brand" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm">{s.label}</p>
-                            <p className="text-xs text-gray-500">{s.blurb}</p>
+                            <p className="font-semibold text-ink text-sm">{s.label}</p>
+                            <p className="text-xs text-ink-soft">{s.blurb}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-ink-faint shrink-0" />
                     </button>
                 ))}
             </div>
@@ -245,7 +245,7 @@ const MessageBubble = ({ message }) => {
     if (isSystem) {
         return (
             <div className="flex justify-center my-2">
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 rounded-lg max-w-[90%] whitespace-pre-line text-center">
+                <div className="bg-warn-tint border border-hairline text-warn text-xs px-3 py-2 rounded-lg max-w-[90%] whitespace-pre-line text-center">
                     {message.content}
                 </div>
             </div>
@@ -257,8 +257,8 @@ const MessageBubble = ({ message }) => {
             <div
                 className={`max-w-[82%] px-3.5 py-2 rounded-2xl text-sm whitespace-pre-line ${
                     isUser
-                        ? "bg-green-600 text-white rounded-br-sm"
-                        : "bg-white text-gray-800 shadow-sm rounded-bl-sm"
+                        ? "bg-brand text-white rounded-br-sm"
+                        : "bg-white text-ink shadow-sm rounded-bl-sm"
                 }`}
             >
                 {message.content}
@@ -267,7 +267,7 @@ const MessageBubble = ({ message }) => {
     );
 };
 
-const ChatStep = ({ user, service }) => {
+const ChatStep = ({ service }) => {
     const [messages, setMessages] = useState([
         {
             role: "model",
@@ -346,7 +346,7 @@ useEffect(() => {
 
     return (
         <div className="flex-1 flex flex-col bg-[#e5ddd5] min-h-0">
-            <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-2 shrink-0 z-10 shadow-sm relative">
+            <div className="bg-ink text-white px-4 py-3 flex items-center gap-2 shrink-0 z-10 shadow-sm relative">
                 <img 
                     src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
                     alt="Cosmosgen" 
@@ -367,28 +367,28 @@ useEffect(() => {
                 {aiTyping && (
                     <div className="flex justify-start mb-2">
                         <div className="bg-white shadow-sm rounded-2xl rounded-bl-sm px-4 py-2.5 flex gap-1">
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                            <span className="w-1.5 h-1.5 bg-ink-faint rounded-full animate-bounce [animation-delay:-0.3s]" />
+                            <span className="w-1.5 h-1.5 bg-ink-faint rounded-full animate-bounce [animation-delay:-0.15s]" />
+                            <span className="w-1.5 h-1.5 bg-ink-faint rounded-full animate-bounce" />
                         </div>
                     </div>
                 )}
                 <div ref={scrollRef} />
             </div>
 
-            <div className="bg-white border-t border-gray-200 px-2.5 py-2.5 flex items-end gap-2 shrink-0">
+            <div className="bg-white border-t border-hairline px-2.5 py-2.5 flex items-end gap-2 shrink-0">
                 <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Type a message"
                     rows={1}
-                    className="flex-1 resize-none px-3.5 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-600/20 focus:border-green-600 max-h-20"
+                    className="flex-1 resize-none px-3.5 py-2 border border-hairline-strong rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-600/20 focus:border-green-600 max-h-20"
                 />
                 <button
                     onClick={sendMessage}
                     disabled={!input.trim() || !connected}
-                    className="shrink-0 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white p-2.5 rounded-full transition-colors"
+                    className="cg-btn cg-btn-go shrink-0 p-2.5 rounded-full"
                 >
                     <Send className="w-4 h-4" />
                 </button>
@@ -423,8 +423,8 @@ const CustomerDemo = () => {
     let content;
     if (checkingSession) {
         content = (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+            <div className="flex-1 flex items-center justify-center bg-sunken">
+                <Loader2 className="w-6 h-6 text-ink-faint animate-spin" />
             </div>
         );
     } else if (!user) {

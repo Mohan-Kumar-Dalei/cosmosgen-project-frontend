@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
-import { User, Phone, MapPin, Zap, ArrowLeft, Trash2, Camera, Map, Loader2, AlertCircle, Landmark, CheckCircle2 } from 'lucide-react';
+import { User, MapPin, ArrowLeft, Trash2, Camera, Loader2, AlertCircle, Landmark, CheckCircle2 } from 'lucide-react';
 
 const TechnicianProfile = () => {
     const navigate = useNavigate();
@@ -36,7 +36,7 @@ const TechnicianProfile = () => {
                 if (res.data.success) {
                     setTechProfile(res.data.data);
                 }
-            } catch (error) {
+            } catch {
                 navigate('/technician/admin/login');
             }
         };
@@ -187,15 +187,15 @@ const TechnicianProfile = () => {
             await api.delete('/technician/profile/delete');
             document.cookie = "techToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             navigate('/technician/admin/login');
-        } catch (error) {
+        } catch {
             alert("Failed to delete account");
             setIsDeleting(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex flex-col font-sans bg-white selection:bg-green-100 selection:text-green-900">
-            <header className="bg-white sticky top-0 z-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+        <div className="min-h-screen flex flex-col font-sans bg-white selection:bg-brand-tint selection:text-green-900">
+            <header className="bg-white sticky top-0 z-50 border-b border-hairline px-4 py-3 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-2">
                     <img 
                         src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
@@ -203,13 +203,13 @@ const TechnicianProfile = () => {
                         className="h-6" 
                     />
                     <div className="flex flex-col hidden sm:flex">
-                        <span className="font-bold text-gray-900 text-sm leading-tight">Cosmosgen</span>
-                        <span className="text-[9px] text-gray-500 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
+                        <span className="cg-h2 leading-tight">Cosmosgen</span>
+                        <span className="text-[9px] text-ink-soft uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
                     </div>
                 </div>
                 <button 
                     onClick={() => navigate('/technician/admin')} 
-                    className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                    className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-sunken text-ink hover:bg-sunken transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" /> Back
                 </button>
@@ -217,22 +217,22 @@ const TechnicianProfile = () => {
 
             <main className="w-full max-w-xl mx-auto px-6 py-8 flex-1 z-10">
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Profile Settings</h2>
-                    <p className="text-gray-500 text-sm font-medium mt-1">Manage your personal information and location.</p>
+                    <h2 className="text-3xl font-bold text-ink tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Profile Settings</h2>
+                    <p className="text-ink-soft text-sm font-medium mt-1">Manage your personal information and location.</p>
                 </div>
 
                 <form onSubmit={handleUpdate} className="space-y-8">
                     
                     {/* Photo Upload */}
-                    <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-gray-100">
+                    <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-hairline">
                         <div className="relative group cursor-pointer">
-                            <div className="w-28 h-28 rounded-full border-2 border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center shadow-sm">
+                            <div className="w-28 h-28 rounded-full border-2 border-hairline overflow-hidden bg-sunken flex items-center justify-center shadow-sm">
                                 {previewUrl ? (
                                     <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                 ) : techProfile.profileImage ? (
                                     <img src={techProfile.profileImage} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
-                                    <User className="w-10 h-10 text-gray-300" />
+                                    <User className="w-10 h-10 text-ink-faint" />
                                 )}
                             </div>
                             <label className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all cursor-pointer">
@@ -242,40 +242,40 @@ const TechnicianProfile = () => {
                             </label>
                         </div>
                         <div className="text-center sm:text-left">
-                            <h3 className="text-lg font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>Profile Photo</h3>
-                            <p className="text-sm text-gray-500 mt-1 max-w-[200px]">Click on the image to upload a new professional photo.</p>
+                            <h3 className="text-lg font-bold text-ink" style={{ fontFamily: "'Outfit', sans-serif" }}>Profile Photo</h3>
+                            <p className="text-sm text-ink-soft mt-1 max-w-[200px]">Click on the image to upload a new professional photo.</p>
                         </div>
                     </div>
 
                     <div className="space-y-5">
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-semibold text-gray-700">Full Name</label>
+                            <label className="cg-label block mb-2">Full Name</label>
                             <input 
                                 type="text" 
                                 name="name" 
                                 required 
                                 value={techProfile.name} 
                                 onChange={handleChange} 
-                                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm text-gray-900" 
+                                className="cg-input" 
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-semibold text-gray-700">Phone Number</label>
+                            <label className="cg-label block mb-2">Phone Number</label>
                             <input 
                                 type="tel" 
                                 name="phone" 
                                 required 
                                 value={techProfile.phone} 
                                 onChange={handleChange} 
-                                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm text-gray-900" 
+                                className="cg-input" 
                             />
                         </div>
 
                         {/* Smart Area Field */}
                         <div className="relative space-y-1.5 z-50">
-                            <label className="block text-sm font-semibold text-gray-700">Area / City (Search to Auto-fill)</label>
+                            <label className="cg-label block mb-2">Area / City (Search to Auto-fill)</label>
                             <div className="relative">
-                                <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                                <MapPin className="w-4 h-4 text-ink-faint absolute left-3.5 top-3" />
                                 <input
                                     type="text"
                                     name="area"
@@ -284,17 +284,17 @@ const TechnicianProfile = () => {
                                     placeholder="Type area to fetch..."
                                     value={techProfile.area}
                                     onChange={handleAreaChange}
-                                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm text-gray-900 font-medium"
+                                    className="cg-input pl-10 pr-10 font-medium"
                                 />
-                                {isSearchingLoc && <Loader2 className="w-4 h-4 text-green-700 animate-spin absolute right-3.5 top-3" />}
+                                {isSearchingLoc && <Loader2 className="w-4 h-4 text-brand animate-spin absolute right-3.5 top-3" />}
                             </div>
 
                             {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto z-50 divide-y divide-gray-100">
+                                <div className="absolute w-full mt-1 cg-card shadow-lg max-h-56 overflow-y-auto z-50 divide-y divide-gray-100">
                                     {suggestions.map((place) => (
-                                        <div key={place.place_id} onClick={() => handleSelectLocation(place)} className="p-3 hover:bg-green-50 cursor-pointer flex gap-3 items-start transition-colors">
-                                            <MapPin className="w-4 h-4 text-green-700 shrink-0 mt-0.5" />
-                                            <span className="text-sm font-medium text-gray-900 leading-tight">{place.label}</span>
+                                        <div key={place.place_id} onClick={() => handleSelectLocation(place)} className="p-3 hover:bg-brand-tint cursor-pointer flex gap-3 items-start transition-colors">
+                                            <MapPin className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                                            <span className="text-sm font-medium text-ink leading-tight">{place.label}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -303,131 +303,131 @@ const TechnicianProfile = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="block text-sm font-semibold text-gray-700">State</label>
+                                <label className="cg-label block mb-2">State</label>
                                 <input 
                                     type="text" 
                                     name="state" 
                                     required 
                                     value={techProfile.state} 
                                     onChange={handleChange} 
-                                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm text-gray-900" 
+                                    className="cg-input" 
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="block text-sm font-semibold text-gray-700">Pincode</label>
+                                <label className="cg-label block mb-2">Pincode</label>
                                 <input 
                                     type="text" 
                                     name="pincode" 
                                     required 
                                     value={techProfile.pincode} 
                                     onChange={handleChange} 
-                                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm text-gray-900" 
+                                    className="cg-input" 
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Bank Details */}
-                    <div className="space-y-4 pt-6 border-t border-gray-100">
-                        <h3 className="text-lg font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>Bank Details</h3>
+                    <div className="space-y-4 pt-6 border-t border-hairline">
+                        <h3 className="text-lg font-bold text-ink" style={{ fontFamily: "'Outfit', sans-serif" }}>Bank Details</h3>
                         
                         {techProfile.bankDetails && techProfile.bankDetails.accountLast4 ? (
-                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-4">
+                            <div className="bg-sunken border border-hairline rounded-xl p-5 space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Account Holder</p>
-                                        <p className="font-semibold text-gray-900">{techProfile.bankDetails.accountHolderName}</p>
+                                        <p className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-1">Account Holder</p>
+                                        <p className="font-semibold text-ink">{techProfile.bankDetails.accountHolderName}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Bank Name</p>
-                                        <p className="font-semibold text-gray-900">{techProfile.bankDetails.bankName}</p>
+                                        <p className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-1">Bank Name</p>
+                                        <p className="font-semibold text-ink">{techProfile.bankDetails.bankName}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Account Number</p>
-                                        <p className="font-semibold text-gray-900">•••• •••• {techProfile.bankDetails.accountLast4}</p>
+                                        <p className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-1">Account Number</p>
+                                        <p className="font-semibold text-ink">•••• •••• {techProfile.bankDetails.accountLast4}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">IFSC Code</p>
-                                        <p className="font-semibold text-gray-900">{techProfile.bankDetails.ifsc}</p>
+                                        <p className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-1">IFSC Code</p>
+                                        <p className="font-semibold text-ink">{techProfile.bankDetails.ifsc}</p>
                                     </div>
                                 </div>
-                                <div className="pt-3 border-t border-gray-200/60 mt-3">
-                                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"></span>
+                                <div className="pt-3 border-t border-hairline/60 mt-3">
+                                    <p className="text-xs text-ink-soft flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0"></span>
                                         Verified branch: {techProfile.bankDetails.branch}
                                     </p>
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-5">
+                            <div className="bg-warn-tint/50 border border-hairline rounded-xl p-5">
                                 <div className="flex items-start gap-3 mb-6">
-                                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                                    <AlertCircle className="w-5 h-5 text-warn mt-0.5 shrink-0" />
                                     <div>
-                                        <p className="font-bold text-amber-900">Bank details missing</p>
-                                        <p className="text-sm text-amber-700 mt-0.5">Please add your bank details below so we can process your payouts.</p>
+                                        <p className="font-bold text-warn">Bank details missing</p>
+                                        <p className="text-sm text-warn mt-0.5">Please add your bank details below so we can process your payouts.</p>
                                     </div>
                                 </div>
                                 
                                 <div className="space-y-4">
                                     <div className="space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700">Account Holder Name</label>
+                                        <label className="cg-label block mb-2">Account Holder Name</label>
                                         <input 
                                             type="text" 
                                             name="accountHolderName" 
                                             value={bank.accountHolderName} 
                                             onChange={handleBankChange} 
                                             placeholder="As per bank records"
-                                            className="w-full px-3.5 py-2.5 border border-amber-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm" 
+                                            className="cg-input" 
                                         />
                                     </div>
                                     
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <label className="block text-sm font-semibold text-gray-700">Account Number</label>
+                                            <label className="cg-label block mb-2">Account Number</label>
                                             <input 
                                                 type="password" 
                                                 name="accountNumber" 
                                                 value={bank.accountNumber} 
                                                 onChange={handleBankChange} 
-                                                className="w-full px-3.5 py-2.5 border border-amber-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm" 
+                                                className="cg-input" 
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="block text-sm font-semibold text-gray-700">Confirm Account No.</label>
+                                            <label className="cg-label block mb-2">Confirm Account No.</label>
                                             <input 
                                                 type="text" 
                                                 name="confirmAccountNumber" 
                                                 value={bank.confirmAccountNumber} 
                                                 onChange={handleBankChange} 
-                                                className="w-full px-3.5 py-2.5 border border-amber-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm" 
+                                                className="cg-input" 
                                             />
                                         </div>
                                     </div>
                                     
                                     <div className="space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700">IFSC Code</label>
+                                        <label className="cg-label block mb-2">IFSC Code</label>
                                         <div className="relative">
-                                            <Landmark className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                                            <Landmark className="w-4 h-4 text-ink-faint absolute left-3.5 top-3" />
                                             <input 
                                                 type="text" 
                                                 name="ifsc" 
                                                 value={bank.ifsc} 
                                                 onChange={handleBankChange}
                                                 placeholder="e.g. HDFC0001234"
-                                                className="w-full pl-10 pr-10 py-2.5 border border-amber-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm font-medium uppercase" 
+                                                className="cg-input pl-10 pr-10 font-medium uppercase" 
                                             />
-                                            {checkingIfsc && <Loader2 className="w-4 h-4 text-green-600 animate-spin absolute right-3.5 top-3" />}
-                                            {bankInfo && !checkingIfsc && <CheckCircle2 className="w-4 h-4 text-green-600 absolute right-3.5 top-3" />}
+                                            {checkingIfsc && <Loader2 className="w-4 h-4 text-brand animate-spin absolute right-3.5 top-3" />}
+                                            {bankInfo && !checkingIfsc && <CheckCircle2 className="w-4 h-4 text-brand absolute right-3.5 top-3" />}
                                         </div>
                                     </div>
                                     
                                     {bankInfo && (
-                                        <div className="bg-white border border-green-200 rounded-lg p-3 mt-2 flex items-start gap-2 shadow-sm">
-                                            <Landmark className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                                        <div className="bg-white border border-hairline rounded-lg p-3 mt-2 flex items-start gap-2 shadow-sm">
+                                            <Landmark className="w-4 h-4 text-brand mt-0.5 shrink-0" />
                                             <div>
-                                                <p className="text-sm font-bold text-gray-900">{bankInfo.bank}</p>
-                                                <p className="text-xs text-gray-500 mt-0.5">{bankInfo.branch}</p>
+                                                <p className="text-sm font-bold text-ink">{bankInfo.bank}</p>
+                                                <p className="text-xs text-ink-soft mt-0.5">{bankInfo.branch}</p>
                                             </div>
                                         </div>
                                     )}
@@ -437,19 +437,19 @@ const TechnicianProfile = () => {
                     </div>
 
 
-                    <div className="flex flex-col-reverse sm:flex-row justify-between items-center pt-8 border-t border-gray-200 gap-4">
+                    <div className="flex flex-col-reverse sm:flex-row justify-between items-center pt-8 border-t border-hairline gap-4">
                         <button 
                             type="button" 
                             onClick={handleDelete} 
                             disabled={isDeleting} 
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-red-600 text-sm font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-danger text-sm font-bold hover:bg-danger-tint transition-colors disabled:opacity-50"
                         >
                             <Trash2 className="w-4 h-4" /> {isDeleting ? 'Deleting...' : 'Delete Account'}
                         </button>
                         <button 
                             type="submit" 
                             disabled={isLoading} 
-                            className="w-full sm:w-auto bg-green-700 hover:bg-green-800 text-white text-sm font-semibold py-2.5 px-8 rounded-lg shadow-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="cg-btn cg-btn-go w-full sm:w-auto px-8"
                         >
                             {isLoading ? "Saving..." : "Save Profile"}
                         </button>

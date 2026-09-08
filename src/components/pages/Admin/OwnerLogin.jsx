@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAdminAuth } from "../Admin/adminAuthContext";
-import { Eye, EyeOff, Hexagon, KeyRound, ShieldCheck } from "lucide-react";
+import AuthShell from "../../ui/AuthShell";
+import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 
 const OwnerLogin = () => {
     const navigate = useNavigate();
@@ -30,107 +31,87 @@ const OwnerLogin = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 py-8">
-            <div className="w-full max-w-sm">
-                <div className="bg-amber-500 text-slate-900 text-xs font-bold text-center py-2 rounded-t-2xl uppercase tracking-wide flex items-center justify-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Owner access
+        <AuthShell
+            role="Owner access"
+            title="Owner sign in"
+            subtitle="Full access to staff, payments and analytics."
+            footer={
+                <p className="text-xs text-ink-faint">
+                    Backoffice staff?{" "}
+                    <Link to="/admin/login" className="text-ink-soft font-semibold hover:text-ink">
+                        Sign in here
+                    </Link>
+                </p>
+            }
+        >
+            {error && (
+                <div className="mb-5 px-3.5 py-3 bg-danger-tint border border-hairline rounded-[10px] text-sm text-danger">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                    <label className="cg-label block mb-2">Email</label>
+                    <input
+                        type="email"
+                        name="email"
+                        required
+                        value={form.email}
+                        onChange={handleChange}
+                        placeholder="owner@cosmosgen.com"
+                        className="cg-input"
+                    />
                 </div>
 
-                <div className="bg-white rounded-b-2xl shadow-xl p-8">
-                    <div className="flex items-center gap-2 mb-8">
-                        <img 
-                            src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
-                            alt="Cosmosgen Logo" 
-                            className="h-8" 
+                <div>
+                    <label className="cg-label block mb-2">Password</label>
+                    <div className="relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            required
+                            value={form.password}
+                            onChange={handleChange}
+                            placeholder="Your password"
+                            className="cg-input pr-10"
                         />
-                        <div className="flex flex-col">
-                            <span className="font-bold text-gray-900 text-lg leading-tight">Cosmosgen</span>
-                            <span className="text-[10px] text-gray-500 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
-                        </div>
-                    </div>
-
-                    <h1 className="text-2xl font-bold text-gray-900 mb-1">Owner sign in</h1>
-                    <p className="text-gray-500 text-sm mb-6">
-                        Full access to staff, payments and analytics.
-                    </p>
-
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                            {error}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                required
-                                value={form.email}
-                                onChange={handleChange}
-                                placeholder="owner@cosmosgen.com"
-                                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    name="password"
-                                    required
-                                    value={form.password}
-                                    onChange={handleChange}
-                                    placeholder="Your password"
-                                    className="w-full pl-3.5 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                                >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                                <KeyRound className="w-4 h-4 text-amber-600" />
-                                Security key
-                            </label>
-                            <input
-                                type="password"
-                                name="secret"
-                                required
-                                value={form.secret}
-                                onChange={handleChange}
-                                placeholder="The key you set at sign up"
-                                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
-                            />
-                        </div>
-
                         <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-faint hover:text-ink"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
                         >
-                            {isLoading ? "Signing in..." : "Sign in"}
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
-                    </form>
-
-                    <p className="text-center text-xs text-gray-400 mt-6 pt-6 border-t border-gray-100">
-                        Backoffice staff?{" "}
-                        <Link to="/admin/login" className="text-gray-500 font-medium hover:text-gray-700">
-                            Sign in here
-                        </Link>
-                    </p>
+                    </div>
                 </div>
-            </div>
-        </div>
+
+                {/* The third field is what separates this door from the
+                    backoffice one, so it says so rather than looking like
+                    another password box. */}
+                <div>
+                    <label className="cg-label mb-2 flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-warn" />
+                        Security key
+                    </label>
+                    <input
+                        type="password"
+                        name="secret"
+                        required
+                        value={form.secret}
+                        onChange={handleChange}
+                        placeholder="The key you set at sign up"
+                        className="cg-input"
+                    />
+                </div>
+
+                <button type="submit" disabled={isLoading} className="cg-btn cg-btn-primary w-full py-3">
+                    {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {isLoading ? "Signing in" : "Sign in"}
+                </button>
+            </form>
+        </AuthShell>
     );
 };
 

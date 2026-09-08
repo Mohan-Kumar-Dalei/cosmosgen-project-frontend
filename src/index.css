@@ -1,5 +1,91 @@
 @import "tailwindcss";
 
+/* ==================================================================
+   COSMOSGEN - the look
+   ==================================================================
+
+   One quiet, paper-coloured canvas; white cards separated by hairlines
+   rather than shadows; large calm headings; and colour spent only where
+   somebody has to act. Everything below is a token, so the whole product
+   moves from here instead of from three hundred class strings.
+
+   Named by role, not by shade. "border-hairline" says what it is for, and
+   the day the paper gets warmer or the green gets deeper, nothing but this
+   block changes.
+   ================================================================== */
+
+@theme {
+    /* Outfit for headings - it has the tighter, more confident letterforms.
+       Plus Jakarta for everything read at length. Both were already being
+       fetched by index.html and neither was actually applied to anything. */
+    --font-display: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+    /* Surfaces. The canvas is warm rather than grey - a flat #f5f5f5 reads
+       as an unstyled page, a hint of paper reads as a choice. */
+    --color-canvas: #faf9f6;
+    --color-surface: #ffffff;
+    --color-sunken: #f5f4f0;
+    --color-hairline: #e9e7e0;
+    --color-hairline-strong: #d9d6cc;
+
+    /* Ink. Never pure black - it vibrates against a warm ground. */
+    --color-ink: #1a1a17;
+    --color-ink-soft: #6b6a63;
+    --color-ink-faint: #9d9b92;
+
+    /* Straight off the company mark: a field of azure stripes with a green
+       arrow rising through it. Both colours are in the product and each keeps
+       the job the logo gives it - blue is the company, green is the thing
+       that went well. */
+    --color-accent: #0f78d0;
+    --color-accent-deep: #0b5da3;
+    --color-accent-tint: #eaf3fc;
+
+    /* Green stays where it already means something: verified, earned,
+       finished. Swapping it for blue would have turned "Verified Rs 1798"
+       into just another blue figure. */
+    --color-brand: #17a03c;
+    --color-brand-deep: #12822f;
+    --color-brand-tint: #eaf6ec;
+
+    /* The side panel. Dark, and tinted with the logo's blue rather than a
+       flat slate, so it reads as part of the mark instead of a default. */
+    --color-panel: #0d1a26;
+    --color-panel-soft: #16293a;
+    --color-panel-line: rgba(255, 255, 255, 0.09);
+
+    /* Money and status. Kept as tokens so a card never invents its own. */
+    --color-warn: #b45309;
+    --color-warn-tint: #fdf6ec;
+    --color-danger: #c02626;
+    --color-danger-tint: #fdf0ef;
+    --color-info: #1d5f9c;
+    --color-info-tint: #eef4fa;
+
+    --radius-card: 14px;
+    --radius-control: 10px;
+
+    /* One shadow, and it is almost nothing. Depth here comes from the
+       hairline and the white sitting on the paper, not from a glow. */
+    --shadow-card: 0 1px 2px rgba(26, 26, 23, 0.04);
+    --shadow-lift: 0 12px 32px -12px rgba(26, 26, 23, 0.18), 0 2px 6px rgba(26, 26, 23, 0.05);
+}
+
+@layer base {
+
+html {
+    background: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-canvas);
+}
+
 /* All clickable elements should show a pointer cursor */
 button,
 a,
@@ -14,24 +100,554 @@ label[for] {
     cursor: pointer;
 }
 
-/* Sleek global scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: #cbd5e1; /* Tailwind slate-300 */
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8; /* Tailwind slate-400 */
 }
 
-/* Firefox */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+/* ------------------------------------------------------------------
+   COMPONENTS
+
+   Written as classes rather than repeated utility strings because these
+   are decisions, not decoration: what a card is, what a primary action
+   looks like. A screen that wants a card should not be able to invent a
+   slightly different one.
+   ------------------------------------------------------------------ */
+
+@layer components {
+    .cg-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+    }
+
+    /* For dialogs and anything genuinely floating above the page */
+    .cg-lift {
+        background: var(--color-surface);
+        border: 1px solid var(--color-hairline);
+        border-radius: 18px;
+        box-shadow: var(--shadow-lift);
+    }
+
+    /* Headings. Big, tight and quiet - the size does the work, so they do
+       not also need to be black and bold. */
+    .cg-h1 {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        line-height: 1.15;
+        letter-spacing: -0.025em;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    @media (min-width: 640px) {
+        .cg-h1 { font-size: 2.125rem; }
+    }
+
+    .cg-h2 {
+        font-family: var(--font-display);
+        font-size: 1.0625rem;
+        line-height: 1.25;
+        letter-spacing: -0.015em;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    .cg-sub {
+        font-size: 0.875rem;
+        color: var(--color-ink-soft);
+        line-height: 1.5;
+    }
+
+    /* The small uppercase label above a value. Used everywhere, defined once. */
+    .cg-label {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+    }
+
+    /* A figure meant to be read as money or a count */
+    .cg-figure {
+        font-family: var(--font-display);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    /* ---- controls ---- */
+
+    .cg-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-radius: var(--radius-control);
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.625rem 1.125rem;
+        border: 1px solid transparent;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        white-space: nowrap;
+    }
+
+    .cg-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .cg-btn-primary {
+        background: var(--color-ink);
+        color: #fff;
+    }
+
+    .cg-btn-primary:hover:not(:disabled) {
+        background: #000;
+    }
+
+    /* Green is the colour of a thing being completed, not of every button.
+       Spending it on "Save" as well left nothing louder for "Verify". */
+    .cg-btn-go {
+        background: var(--color-brand);
+        color: #fff;
+    }
+
+    .cg-btn-go:hover:not(:disabled) {
+        background: var(--color-brand-deep);
+    }
+
+    .cg-btn-quiet {
+        background: var(--color-surface);
+        border-color: var(--color-hairline-strong);
+        color: var(--color-ink);
+    }
+
+    .cg-btn-quiet:hover:not(:disabled) {
+        background: var(--color-sunken);
+    }
+
+    .cg-btn-danger {
+        background: var(--color-surface);
+        border-color: #f0cfcd;
+        color: var(--color-danger);
+    }
+
+    .cg-btn-danger:hover:not(:disabled) {
+        background: var(--color-danger-tint);
+    }
+
+    .cg-btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8125rem;
+        border-radius: 8px;
+    }
+
+    /* An icon-only square button - refresh, close, back */
+    .cg-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.375rem;
+        height: 2.375rem;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--color-hairline);
+        background: var(--color-surface);
+        color: var(--color-ink-soft);
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .cg-icon-btn:hover:not(:disabled) {
+        background: var(--color-sunken);
+        color: var(--color-ink);
+    }
+
+    .cg-icon-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .cg-input {
+        width: 100%;
+        background: var(--color-surface);
+        border: 1px solid var(--color-hairline-strong);
+        border-radius: var(--radius-control);
+        padding: 0.625rem 0.875rem;
+        font-size: 0.875rem;
+        color: var(--color-ink);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .cg-input::placeholder {
+        color: var(--color-ink-faint);
+    }
+
+    .cg-input:focus {
+        outline: none;
+        border-color: var(--color-brand);
+        box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+    }
+
+    /* ---- tabs ---- */
+
+    .cg-tabs {
+        display: flex;
+        gap: 0.125rem;
+        border-bottom: 1px solid var(--color-hairline);
+        overflow-x: auto;
+        /* Explicit, because a box with overflow-x auto and overflow-y visible
+           computes overflow-y to auto - which is where the stray vertical
+           scrollbar in the tab strip actually came from. */
+        overflow-y: hidden;
+        scrollbar-width: none;
+    }
+
+    .cg-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* An underline, not a pill. A row of grey pills is the most generic thing
+       an admin panel can wear, and the underline leaves the canvas visible. */
+    .cg-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 0.875rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--color-ink-soft);
+        white-space: nowrap;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .cg-tab:hover {
+        color: var(--color-ink);
+    }
+
+    .cg-tab-on {
+        color: var(--color-ink);
+        font-weight: 600;
+        border-bottom-color: var(--color-ink);
+    }
+
+    /* ---- odds and ends ---- */
+
+    .cg-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.1875rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+
+    .cg-divide > * + * {
+        border-top: 1px solid var(--color-hairline);
+    }
+
+    /* ---- the strip that stays ---- */
+
+    /*
+     * The tab row, pinned.
+     *
+     * Once a history or a ticket list is long enough to scroll, switching
+     * tabs meant scrolling all the way back to the top to reach them, and
+     * then scrolling down again in the next tab. The tabs are how you move
+     * around this screen, so they stay reachable wherever you are in it.
+     *
+     * The negative margin lets it span the full width of the page while the
+     * page itself keeps its padding, so the frosted strip runs edge to edge
+     * instead of floating in a padded box.
+     */
+    .cg-tabbar {
+        position: sticky;
+        top: 45px;
+        z-index: 20;
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        background: rgba(250, 249, 246, 0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    @media (min-width: 1024px) {
+        /* No mobile header to sit under on a wide screen */
+        .cg-tabbar {
+            top: 0;
+            margin-left: -2rem;
+            margin-right: -2rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+    }
+
+    /* ---- the dark side panel ---- */
+
+    /*
+     * A rail item.
+     *
+     * The filled blue block that used to mark the current page read as a
+     * button mid-press rather than as a location, so there is no block any
+     * more. Where you are is said with white text, a lit icon and a short
+     * accent rule down the left edge.
+     *
+     * The hover is the microinteraction: the rule grows out of nothing, the
+     * ground lifts by a few percent and the row nudges a couple of pixels
+     * towards the page it opens. Cheap to run - transform and opacity only -
+     * and it makes the rail feel like it is answering you.
+     */
+    .cg-nav-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 0.75rem 0.625rem 0.9375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.6);
+        border-radius: 0 var(--radius-control) var(--radius-control) 0;
+        transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .cg-nav-item::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 2px;
+        height: 0;
+        border-radius: 0 2px 2px 0;
+        background: var(--color-accent);
+        transform: translateY(-50%);
+        transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+        opacity: 0;
+    }
+
+    .cg-nav-item:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.04);
+        transform: translateX(2px);
+    }
+
+    .cg-nav-item:hover::before {
+        height: 40%;
+        opacity: 0.55;
+    }
+
+    .cg-nav-item-on,
+    .cg-nav-item-on:hover {
+        color: #fff;
+        font-weight: 600;
+        background: linear-gradient(90deg, rgba(15, 120, 208, 0.16), rgba(15, 120, 208, 0));
+        transform: none;
+    }
+
+    .cg-nav-item-on::before,
+    .cg-nav-item-on:hover::before {
+        height: 60%;
+        opacity: 1;
+    }
+
+    /* ---- rich surfaces ---- */
+
+    /*
+     * Depth without weight.
+     *
+     * A flat fill on a big card reads as an unfinished block. These lay two
+     * soft radials over the base colour and a hairline grid on top, so the
+     * surface has somewhere for light to fall. All CSS - no image to load and
+     * nothing to go stale.
+     */
+    .cg-rich-dark {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(135% 100% at 8% 0%, rgba(15, 120, 208, 0.34), transparent 58%),
+            radial-gradient(100% 90% at 100% 108%, rgba(23, 160, 60, 0.20), transparent 62%),
+            linear-gradient(152deg, #16304c 0%, #0f2136 42%, var(--color-panel) 100%);
+    }
+
+    /*
+     * A block of squares in one corner, and nowhere else.
+     *
+     * A pattern spread across the whole card fights whatever is written on it.
+     * Held to the top-right and faded out along the diagonal, it does what a
+     * watermark does: gives the surface a made quality that you notice second,
+     * after the number you actually came to read.
+     */
+    .cg-rich-dark::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+        background-size: 22px 22px;
+        background-position: top right;
+        mask-image: linear-gradient(215deg, #000 0%, rgba(0, 0, 0, 0.6) 20%, transparent 46%);
+        -webkit-mask-image: linear-gradient(215deg, #000 0%, rgba(0, 0, 0, 0.6) 20%, transparent 46%);
+    }
+
+    /* The same idea in paper, for a headline card on a light screen */
+    .cg-rich-light {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(110% 130% at 100% 0%, rgba(15, 120, 208, 0.10), transparent 58%),
+            radial-gradient(90% 110% at 0% 100%, rgba(23, 160, 60, 0.08), transparent 58%),
+            linear-gradient(165deg, #ffffff 0%, #faf8f4 100%);
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-card);
+    }
+
+    /* Same squares, same corner, in ink instead of light */
+    .cg-rich-light::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+            linear-gradient(rgba(26, 26, 23, 0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(26, 26, 23, 0.06) 1px, transparent 1px);
+        background-size: 20px 20px;
+        background-position: top right;
+        mask-image: linear-gradient(215deg, #000 0%, rgba(0, 0, 0, 0.55) 18%, transparent 44%);
+        -webkit-mask-image: linear-gradient(215deg, #000 0%, rgba(0, 0, 0, 0.55) 18%, transparent 44%);
+    }
+
+    /* Anything sitting on a rich surface needs to be above its overlay */
+    .cg-rich-dark > *,
+    .cg-rich-light > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    /*
+     * The curved seam between the panel and the form.
+     *
+     * The paths live in ui/SplitCurve.jsx; this only says which one applies at
+     * which width. The panel is given extra width so the clip has something to
+     * eat into - what shows is the average of the curve, not the full column.
+     */
+    .cg-split-curve {
+        clip-path: url(#cgSplitCurveDown);
+    }
+
+    @media (min-width: 1024px) {
+        .cg-split-curve {
+            clip-path: url(#cgSplitCurve);
+        }
+    }
+
+    /* ---- the online / offline switch ---- */
+
+    .cg-switch {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        width: 3.25rem;
+        height: 1.75rem;
+        border-radius: 999px;
+        padding: 0.1875rem;
+        background: rgba(255, 255, 255, 0.14);
+        transition: background-color 0.25s ease;
+        flex-shrink: 0;
+    }
+
+    .cg-switch-on {
+        background: var(--color-brand);
+    }
+
+    .cg-switch-knob {
+        width: 1.375rem;
+        height: 1.375rem;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .cg-switch-on .cg-switch-knob {
+        transform: translateX(1.5rem);
+    }
+
+    .cg-switch:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+}
+
+/* Sleek global scrollbar.
+ *
+ * Inside @layer base on purpose. Unlayered CSS outranks everything in a
+ * layer, so while these sat outside, the "* { scrollbar-width: thin }" below
+ * beat .cg-tabs and the tab strip carried a scrollbar it had explicitly
+ * asked not to have.
+ */
+@layer base {
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--color-hairline-strong);
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--color-ink-faint);
+    }
+
+    /* Firefox */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-hairline-strong) transparent;
+    }
+}
+
+/* Badge counts change the moment a socket event lands, so the number needs a
+   beat of movement or the update reads as a rendering glitch rather than news.
+   Kept here rather than inline because Tailwind cannot generate keyframes
+   from an arbitrary-value class on its own. */
+@keyframes popIn {
+    from { opacity: 0; transform: translateY(-3px) scale(0.8); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    20%      { transform: rotate(-14deg); }
+    40%      { transform: rotate(12deg); }
+    60%      { transform: rotate(-8deg); }
+    80%      { transform: rotate(4deg); }
+}
+
+@keyframes shimmer {
+    100% { transform: translateX(100%); }
+}
+
+/* A skeleton shaped like the thing that is coming, not a grey box. The
+   sweep is what says "still arriving" rather than "failed". */
+.cg-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-sunken);
+    border-radius: 8px;
+}
+
+.cg-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    animation: shimmer 1.6s infinite;
 }

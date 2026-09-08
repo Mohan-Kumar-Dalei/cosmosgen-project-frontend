@@ -26,17 +26,67 @@ const createRoleSocket = (role) => {
     return s;
 };
 
+/**
+ * Re-read the screen when a dropped connection comes back, or when the user
+ * returns to a tab that had gone to the background.
+ *
+ * Socket.IO reconnects on its own but it does not replay anything: every
+ * event the server sent while the socket was away was sent to nobody. A
+ * technician's phone goes in his pocket, the screen sleeps, the signal dies
+ * in a stairwell - and the panel comes back looking perfectly live while
+ * showing what was true ten minutes ago. That is the "sometimes it doesn't
+ * update" nobody can reproduce on a desk.
+ *
+ * So a reconnection is itself the signal to reload, because the panel cannot
+ * know what it missed. Nothing here runs on a timer: it fires on a real
+ * reconnection or on the user genuinely coming back, and the short guard
+ * only stops the two of them firing together from fetching twice.
+ */
+export const onLiveResume = (roleSocket, reload) => {
+    let last = 0;
+
+    const run = () => {
+        const now = Date.now();
+        if (now - last < 3000) return;
+        last = now;
+        reload();
+    };
+
+    const onVisible = () => {
+        if (document.visibilityState === "visible") run();
+    };
+
+    // Manager-level event: fires once the socket is back up, not on each
+    // failed attempt
+    roleSocket.io.on("reconnect", run);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+        roleSocket.io.off("reconnect", run);
+        document.removeEventListener("visibilitychange", onVisible);
+    };
+};
+
+/**
+ * connect() on a live socket and disconnect() on a dead one are both no-ops
+ * in socket.io, so these are unguarded on purpose.
+ *
+ * The guards that used to be here read the wrong state: a socket in the
+ * middle of opening is not yet `connected`, so "disconnect if connected" left
+ * it opening after the panel had already unmounted - a live connection with
+ * no listeners on it.
+ */
 // Customer chat widget
 export const socket = createRoleSocket("customer");
-export const connectSocket = () => { if (!socket.connected) socket.connect(); };
-export const disconnectSocket = () => { if (socket.connected) socket.disconnect(); };
+export const connectSocket = () => socket.connect();
+export const disconnectSocket = () => socket.disconnect();
 
 // Technician panel
 export const techSocket = createRoleSocket("technician");
-export const connectTechSocket = () => { if (!techSocket.connected) techSocket.connect(); };
-export const disconnectTechSocket = () => { if (techSocket.connected) techSocket.disconnect(); };
+export const connectTechSocket = () => techSocket.connect();
+export const disconnectTechSocket = () => techSocket.disconnect();
 
 // Admin panel
 export const adminSocket = createRoleSocket("admin");
-export const connectAdminSocket = () => { if (!adminSocket.connected) adminSocket.connect(); };
-export const disconnectAdminSocket = () => { if (adminSocket.connected) adminSocket.disconnect(); };
+export const connectAdminSocket = () => adminSocket.connect();
+export const disconnectAdminSocket = () => adminSocket.disconnect();

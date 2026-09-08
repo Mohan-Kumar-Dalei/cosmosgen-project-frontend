@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../services/api';
-import { Eye, EyeOff, Hexagon } from 'lucide-react';
+import SplitCurve from "../../ui/SplitCurve";
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
+const LOGO = "https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959";
+
+/**
+ * The vendor's way in.
+ *
+ * This used to be a dark split screen with glowing blobs and gradient text,
+ * which belonged to a different product from the one behind the door. The
+ * split itself is worth keeping on a desktop - it leaves room to say what
+ * this is for - but it is paper now, like everything else, and the panel
+ * says something useful instead of shouting.
+ */
 const TechnicianLogin = () => {
     const navigate = useNavigate();
     const [credentials, setCredentials] = useState({ phone: '', password: '' });
@@ -35,131 +47,163 @@ const TechnicianLogin = () => {
         }
     };
 
+    /*
+     * A different shape from the split screen.
+     *
+     * The two-column layout gave half the page to marketing that a vendor
+     * standing in a stairwell has no use for, and on a phone that half simply
+     * vanished - so the design he saw on his desk was not the design he used.
+     * This is one screen at every width: the company surface behind, his card
+     * floating on it, and the three things the app does reduced to a strip he
+     * can take in without reading.
+     */
+    /*
+     * A split, built so the half that carries the company does not disappear
+     * on a phone.
+     *
+     * The panel is a full column beside the form on a desktop and a compact
+     * lit band above it on a handset - same surface, same words, same mark,
+     * just folded. That matters more than usual here: this layout becomes the
+     * Android and iOS screen, and a design whose better half only exists at
+     * 1024px is not a design anyone actually ships.
+     */
     return (
-        <div className="min-h-screen flex bg-white font-sans selection:bg-green-100 selection:text-green-900">
+        <div className="min-h-screen bg-canvas lg:flex">
+            <SplitCurve />
 
-            {/* LEFT PANEL - MASSIVE ROUNDED GRAPHIC WITH BOLD TYPOGRAPHY (Sticky) */}
-            <div className="hidden lg:flex lg:w-1/2 p-4 pr-0 sticky top-0 h-screen">
-                <div className="w-full h-full rounded-[2.5rem] bg-slate-900 relative overflow-hidden flex flex-col justify-center px-12 xl:px-20 2xl:px-24">
 
-                    {/* Modern Dotted Pattern */}
-                    <div className="absolute inset-0 opacity-20 z-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
-
-                    {/* Glowing Blobs */}
-                    <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-green-700/40 rounded-full mix-blend-screen filter blur-[120px] opacity-60 z-0"></div>
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-sky-700/40 rounded-full mix-blend-screen filter blur-[150px] opacity-60 z-0"></div>
-
-                    {/* Brand Name & Typography */}
-                    <div className="relative z-10 w-full">
-                        <span className="block font-bold text-sky-400 text-sm 2xl:text-base tracking-widest uppercase mb-12 2xl:mb-16">
-                            Cosmosgen Engineers Pvt. Ltd.
-                        </span>
-
-                        <div style={{ fontFamily: "'Outfit', sans-serif" }}>
-                            <h1 className="text-6xl lg:text-7xl xl:text-8xl 2xl:text-[7rem] font-extrabold text-white leading-[1.05] mb-2 tracking-tight">
-                                Engineered <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-sky-400">For</span>
-                            </h1>
-                            <h1 className="text-6xl lg:text-7xl xl:text-8xl 2xl:text-[7rem] font-extrabold text-white leading-[1.05] mb-8 tracking-tight">
-                                Excellence.
-                            </h1>
-                        </div>
-
-                        <p className="text-lg 2xl:text-xl text-sky-100/70 font-medium leading-relaxed max-w-xl">
-                            Join the elite network of Cosmosgen professionals and manage your workflow seamlessly. Access real-time AI dispatch, intelligent routing, and instant payouts all from a single, unified dashboard designed to maximize your daily earnings and minimize downtime.
-                        </p>
-                    </div>
-
-                </div>
-            </div>
-
-            {/* RIGHT PANEL - CLEAN FORM (Scrollable) */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-12 xl:p-16 h-screen overflow-y-auto">
-
-                {/* Header / Logo - ONLY VISIBLE ON MOBILE */}
-                <div className="flex lg:hidden items-center gap-2 mb-8 mt-4">
-                    <img 
-                        src="https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959" 
-                        alt="Cosmosgen Logo" 
-                        className="h-8" 
-                    />
+            {/* THE PANEL */}
+            <aside className="cg-rich-dark cg-split-curve lg:w-[50%] xl:w-[52%] shrink-0 flex flex-col justify-between px-6 pt-8 pb-14 sm:px-10 lg:px-14 xl:px-20 lg:py-14">
+                <div className="flex items-center gap-2.5">
+                    <img src={LOGO} alt="Cosmosgen" className="h-9 w-9 rounded-full bg-white p-[3px] object-contain" />
                     <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 text-lg tracking-tight leading-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Cosmosgen</span>
-                        <span className="text-[10px] text-gray-500 uppercase tracking-widest leading-tight">Engineers Pvt. Ltd.</span>
+                        <span className="font-display font-semibold text-[17px] tracking-tight leading-none text-white">
+                            Cosmosgen
+                        </span>
+                        <span className="text-[9px] text-white/40 uppercase tracking-[0.16em] leading-none mt-1">
+                            Engineers Pvt. Ltd.
+                        </span>
                     </div>
                 </div>
 
-                {/* Form Container */}
-                <div className="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Log in</h1>
-                        <p className="text-gray-500 text-sm font-medium">Welcome back! Please enter your details.</p>
+                {/* On a phone this is one line under the mark. On a desktop it
+                    opens out into the headline the column is there for. */}
+                <div className="mt-7 lg:mt-0 lg:max-w-md">
+                    <span className="cg-pill bg-white/10 text-white/70 uppercase tracking-[0.14em] mb-4 hidden lg:inline-flex">
+                        Vendor sign in
+                    </span>
+
+                    <h2 className="font-display text-[1.75rem] sm:text-4xl lg:text-[3rem] xl:text-[3.4rem] font-semibold leading-[1.06] tracking-[-0.035em] text-white">
+                        Your work,
+                        <br className="hidden sm:block" />
+                        <span className="text-brand"> your money,</span>
+                        <br className="hidden sm:block" />
+                        <span className="lg:block"> in one place.</span>
+                    </h2>
+
+                    {/* Three plain lines, no box. Boxed and bordered, this
+                        read as a table of contents parked in the middle of the
+                        panel - the headline above it is the thing to look at,
+                        and these only need to be legible underneath it. */}
+                    <div className="mt-8 lg:mt-12 flex flex-col sm:flex-row lg:flex-col gap-5 sm:gap-8 lg:gap-5">
+                        {[
+                            ["Jobs", "The one you are on, and what is next."],
+                            ["Wallet", "What you earned, and what to hand over."],
+                            ["Route", "The way there, and they know you are coming."],
+                        ].map(([term, line]) => (
+                            <div key={term} className="lg:flex lg:gap-5">
+                                <span className="cg-label text-accent block lg:w-16 lg:shrink-0 lg:pt-0.5">{term}</span>
+                                <p className="text-[13px] lg:text-sm text-white/55 leading-relaxed mt-1 lg:mt-0 max-w-xs">
+                                    {line}
+                                </p>
+                            </div>
+                        ))}
                     </div>
+                </div>
+
+                <p className="hidden lg:block text-xs text-white/30">© Cosmosgen 2026</p>
+            </aside>
+
+            {/* THE FORM */}
+            <main className="flex-1 flex items-center justify-center px-4 py-10 sm:px-8 lg:py-12">
+                <div className="w-full max-w-sm">
+                    <span className="cg-pill bg-accent-tint text-accent uppercase tracking-[0.1em] mb-5">
+                        Vendor
+                    </span>
+
+                    <h1 className="cg-h1 mb-1.5">Sign in</h1>
+                    <p className="cg-sub mb-8">Your number and password. Nothing else.</p>
+
                     {pendingNotice && (
-                        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                            <p className="text-sm font-semibold text-amber-900">Not able to sign in yet</p>
-                            <p className="text-sm text-amber-700 mt-1">{pendingNotice}</p>
+                        <div className="mb-6 p-4 bg-warn-tint border border-hairline rounded-[10px] flex gap-2.5">
+                            <AlertCircle className="w-4 h-4 text-warn shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-semibold text-warn">Not able to sign in yet</p>
+                                <p className="text-sm text-warn/90 mt-0.5">{pendingNotice}</p>
+                            </div>
                         </div>
                     )}
+
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="space-y-1.5">
-                            <label className="block text-sm font-semibold text-gray-700">Phone Number</label>
+                        <div>
+                            <label className="cg-label block mb-2">Phone number</label>
                             <input
+                                inputMode="numeric"
                                 type="tel"
                                 name="phone"
                                 required
-                                placeholder="Enter your 10-digit number"
+                                placeholder="Your 10-digit number"
                                 value={credentials.phone}
                                 onChange={handleChange}
-                                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm text-gray-900 placeholder-gray-400"
+                                className="cg-input py-3"
                             />
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="block text-sm font-semibold text-gray-700">Password</label>
+                        <div>
+                            <label className="cg-label block mb-2">Password</label>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     name="password"
                                     required
-                                    placeholder="••••••••"
+                                    placeholder="Your password"
                                     value={credentials.password}
                                     onChange={handleChange}
-                                    className="w-full pl-3.5 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700/20 focus:border-green-700 transition-colors text-sm text-gray-900 placeholder-gray-400"
+                                    className="cg-input py-3 pr-10"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-faint hover:text-ink"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-2.5 rounded-lg shadow-sm transition-colors mt-2 text-sm"
-                        >
-                            {isLoading ? "Signing in..." : "Sign in"}
+                        {/* A tall target - this gets pressed with a thumb, often
+                            with one hand, often outdoors */}
+                        <button type="submit" disabled={isLoading} className="cg-btn cg-btn-primary w-full py-3.5">
+                            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {isLoading ? "Signing in" : "Sign in"}
                         </button>
                     </form>
 
-                    <p className="text-center text-sm text-gray-500 mt-8">
-                        Don't have an account?{' '}
-                        <Link to="/technician/admin/register" className="text-green-700 font-semibold hover:text-green-800 transition-colors">
-                            Sign up
+                    <p className="text-center text-sm text-ink-soft mt-8 pt-8 border-t border-hairline">
+                        New here?{" "}
+                        <Link to="/technician/admin/register" className="text-accent font-semibold hover:text-accent-deep">
+                            Join as a vendor
                         </Link>
                     </p>
-                </div>
 
-                {/* Footer */}
-                <div className="flex justify-between items-center text-xs text-gray-400 mt-12 font-medium">
-                    <p>© Cosmosgen 2026</p>
-                    <a href="mailto:support@cosmosgen.com" className="hover:text-gray-600">support@cosmosgen.com</a>
+                    <p className="text-center text-xs text-ink-faint mt-6">
+                        <a href="mailto:support@cosmosgen.com" className="hover:text-ink-soft">
+                            support@cosmosgen.com
+                        </a>
+                    </p>
                 </div>
-            </div>
-
+            </main>
         </div>
     );
 };

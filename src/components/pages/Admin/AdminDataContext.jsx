@@ -5,23 +5,52 @@ import { useAdminAuth } from "./adminAuthContext";
 const AdminDataContext = createContext(null);
 
 /**
- * Badge counts live here rather than inside AdminLayout, because AdminLayout
- * is rendered by each page and gets fresh state on every navigation. The page
+ * Every badge number in the backoffice, in one place.
+ *
+ * They live here rather than inside AdminLayout because AdminLayout is
+ * rendered by each page and gets fresh state on every navigation. The page
  * that performs a mutation calls refreshCounts() directly instead of waiting
  * for a socket round trip, so the number moves the moment the action succeeds.
+ *
+ * Every one of these comes from the server's own count, not from a list a
+ * screen happens to have loaded. That was the whole trouble before: a tab
+ * counted its own rows, so it could only tell you what was waiting on it once
+ * you had opened it - the wallet said nothing about a settlement that still
+ * needed recording until you were already looking at the wallet.
  */
+const EMPTY_COUNTS = {
+    // Tickets
+    ticketsNew: 0,
+    ticketsReturned: 0,
+    ticketsQueued: 0,
+    ticketsScheduled: 0,
+    ticketsActive: 0,
+
+    // Payments
+    paymentsToVerify: 0,
+    paymentsCash: 0,
+    paymentsOnline: 0,
+    paymentsVisits: 0,
+    wallets: 0,
+};
+
 export const AdminDataProvider = ({ children }) => {
     const { admin, loading: authLoading } = useAdminAuth();
-    const [counts, setCounts] = useState({
-        pending: 0,
-        rejected: 0,
-        scheduled: 0,
-        active: 0,
-        toVerify: 0,
-        awaitingPayment: 0,
-        wallets: 0,
-    });
+    const [counts, setCounts] = useState(EMPTY_COUNTS);
     const [globalRefreshTrigger, setGlobalRefreshTrigger] = useState(0);
+
+    /**
+     * Moves a badge the instant a socket event lands.
+     *
+     * The count used to wait for refreshCounts to make a round trip to
+     * /dashboard/stats, so the number arrived a beat after the notification
+     * that announced it - which read as lag on a panel that is meant to be
+     * live. The socket already carries the news; this applies it immediately
+     * and the fetch that follows reconciles the exact figure.
+     */
+    const bumpCount = useCallback((key, delta = 1) => {
+        setCounts((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }));
+    }, []);
 
     const refreshCounts = useCallback(async () => {
         // Fetching before a session exists returns 401, and the axios
@@ -35,16 +64,8 @@ export const AdminDataProvider = ({ children }) => {
 
         try {
             const res = await api.get("/admin/dashboard/stats");
-            const t = res.data.data.tickets;
-            setCounts({
-                pending: t.pending || 0,
-                rejected: t.rejected || 0,
-                scheduled: t.scheduled || 0,
-                active: (t.assigned || 0) + (t.inProgress || 0),
-                toVerify: res.data.data.awaitingReconcile?.count || res.data.data.unverifiedCash?.count || 0,
-                awaitingPayment: res.data.data.awaitingPayment?.count || 0,
-                wallets: res.data.data.cashWithTechnicians?.count || 0,
-            });
+            const badges = res.data.data.badges || {};
+            setCounts({ ...EMPTY_COUNTS, ...badges });
         } catch {
             // Badge counts are decoration - never surface an error for them
         }
@@ -54,13 +75,10 @@ export const AdminDataProvider = ({ children }) => {
         if (authLoading || !admin) return;
 
         refreshCounts();
-        // Slow poll only as a floor. Real updates come from mutations and sockets.
-        const interval = setInterval(refreshCounts, 60000);
-        return () => clearInterval(interval);
     }, [admin, authLoading, refreshCounts]);
 
     return (
-        <AdminDataContext.Provider value={{ counts, refreshCounts, globalRefreshTrigger }}>
+        <AdminDataContext.Provider value={{ counts, refreshCounts, bumpCount, globalRefreshTrigger }}>
             {children}
         </AdminDataContext.Provider>
     );
@@ -69,5 +87,10 @@ export const AdminDataProvider = ({ children }) => {
 export const useAdminData = () => {
     const ctx = useContext(AdminDataContext);
     // Pages outside the provider shouldn't crash
-    return ctx || { counts: { pending: 0, toVerify: 0 }, refreshCounts: () => {}, globalRefreshTrigger: 0 };
+    return ctx || {
+        counts: EMPTY_COUNTS,
+        refreshCounts: () => {},
+        bumpCount: () => {},
+        globalRefreshTrigger: 0,
+    };
 };

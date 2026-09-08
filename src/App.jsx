@@ -1,5 +1,5 @@
-import React from "react";
-import { Toaster } from "sonner";
+import { GooeyToaster } from "goey-toast";
+import "goey-toast/styles.css";
 import { AdminAuthProvider } from "./components/pages/Admin/AdminAuth";
 import { AdminDataProvider } from "./components/pages/Admin/AdminDataContext";
 import AppRouter from "./router/AppRouter";
@@ -9,12 +9,15 @@ const App = () => {
         <AdminAuthProvider>
             <AdminDataProvider>
                 <AppRouter />
-                <Toaster
-                    position="bottom-center"
-                    richColors
+                <GooeyToaster
+                    position="top-right"
+                    theme="light"
                     closeButton
-                    duration={5000}
-                    toastOptions={{ style: { fontFamily: "inherit" } }}
+                    offset="20px"
+                    duration={6000}
+                    preset="smooth"
+                    showProgress={false}
+                    visibleToasts={4}
                 />
             </AdminDataProvider>
         </AdminAuthProvider>
