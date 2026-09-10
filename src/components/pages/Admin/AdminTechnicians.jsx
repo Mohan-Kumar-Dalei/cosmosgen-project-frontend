@@ -7,9 +7,10 @@ import MapModal from "../../ui/MapModal";
 import NotifyBadge from "../../ui/NotifyBadge";
 import { useAdminData } from "./AdminDataContext";
 import {
-    Loader2, AlertCircle, Search, Star, MapPin, Phone,
+    Loader2, AlertCircle, Search, MapPin, Phone,
     X, Banknote, Wrench, CalendarClock, Ban, CheckCircle2,
-    Clock, ShieldOff, UserCheck, RefreshCw,
+    Clock, ShieldOff, UserCheck, RefreshCw, BadgeCheck, ChevronRight, MessageCircle,
+    Briefcase, Star,
 } from "lucide-react";
 
 const VIEW_TABS = [
@@ -213,73 +214,9 @@ const AdminTechnicians = () => {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 pb-8">
                     {technicians.map((t) => (
-                        <button
-                            key={t._id}
-                            onClick={() => setSelectedId(t._id)}
-                            className="text-left cg-card p-4 hover:border-green-300 hover:shadow-sm transition-all"
-                        >
-                            <div className="flex items-start gap-3 mb-3">
-                                <div className="w-11 h-11 rounded-full bg-sunken flex items-center justify-center shrink-0 overflow-hidden">
-                                    {t.profileImage ? (
-                                        <img src={t.profileImage} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="text-base font-bold text-ink-soft">{t.name?.[0]?.toUpperCase()}</span>
-                                    )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="font-semibold text-ink text-sm truncate">{t.name}</p>
-                                    <p className="text-xs text-ink-soft truncate">{t.skills?.[0] || "No skill set"}</p>
-                                </div>
-                                {view === "roster" ? (
-                                    <span className={"text-[10px] font-bold px-2 py-1 rounded-full shrink-0 " + LIVE_STYLES[t.liveStatus]}>
-                                        {LIVE_LABELS[t.liveStatus]}
-                                    </span>
-                                ) : view === "pending" ? (
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 bg-warn-tint text-warn">
-                                        NEW
-                                    </span>
-                                ) : view === "blocked" ? (
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 bg-danger-tint text-danger">
-                                        BLOCKED
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 bg-sunken text-ink-soft">
-                                        REJECTED
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-3 text-xs text-ink-soft flex-wrap">
-                                <span className="flex items-center gap-0.5">
-                                    <Phone className="w-3 h-3" /> {t.phone}
-                                </span>
-                                <span className="flex items-center gap-0.5 truncate">
-                                    <MapPin className="w-3 h-3 shrink-0" /> {t.area}
-                                </span>
-                            </div>
-
-                            {view === "roster" && (
-                                <div className="flex items-center gap-3 text-xs text-ink-soft mt-1.5">
-                                    <span className="flex items-center gap-0.5">
-                                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                        {t.rating?.toFixed(1) || "5.0"}
-                                    </span>
-                                    <span>{t.completedJobs} jobs</span>
-                                </div>
-                            )}
-
-                            {view === "pending" && (
-                                <p className="text-xs text-ink-faint mt-2">Applied {timeAgo(t.createdAt)}</p>
-                            )}
-
-                            {view === "roster" && !t.hasLocation && (
-                                <p className="text-[10px] text-warn mt-2 font-medium">
-                                    No location set — won't show in nearby search
-                                </p>
-                            )}
-                        </button>
+                        <VendorCard key={t._id} t={t} view={view} onOpen={() => setSelectedId(t._id)} />
                     ))}
                 </div>
             )}
@@ -292,6 +229,150 @@ const AdminTechnicians = () => {
                 />
             )}
         </AdminLayout>
+    );
+};
+
+/* ================================================================== */
+/* ONE VENDOR                                                           */
+/* ================================================================== */
+
+const STATUS_TAG = {
+    pending: { label: "New application", cls: "bg-warn-tint text-warn" },
+    blocked: { label: "Blocked", cls: "bg-danger-tint text-danger" },
+    rejected: { label: "Rejected", cls: "bg-sunken text-ink-soft" },
+};
+
+const LIVE_TAG = {
+    available: "bg-brand-tint text-brand",
+    on_job: "bg-accent-tint text-accent",
+    offline: "bg-sunken text-ink-soft",
+};
+
+const RoundAction = ({ href, label, children }) => (
+    <a
+        href={href}
+        target={href.startsWith("http") ? "_blank" : undefined}
+        rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={label}
+        title={label}
+        className="w-11 h-11 rounded-full border border-hairline-strong bg-surface text-ink-soft flex items-center justify-center shrink-0 transition-all hover:bg-accent hover:border-accent hover:text-white hover:scale-105"
+    >
+        {children}
+    </a>
+);
+
+/**
+ * A vendor.
+ *
+ * One card at every width, in a grid rather than stacked one per row: a
+ * roster of forty full-width rows is a page nobody scrolls to the bottom of.
+ *
+ * The three facts along the middle - work done, how it went, where they are -
+ * carry icons and a larger figure because they are what the office is reading
+ * the card for. Everything else on it is identity.
+ */
+const VendorCard = ({ t, view, onOpen }) => {
+    const onRoster = view === "roster";
+    const tag = STATUS_TAG[view];
+    const action = view === "pending" ? "Review" : "Open";
+    const waNumber = String(t.phone || "").replace(/\D/g, "");
+
+    return (
+        // The spacer is what the portrait hangs into. Without it the row above
+        // clips the top of every face in the grid.
+        <div className="pt-7">
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={onOpen}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+                className="cg-vcard group cursor-pointer px-5 pb-5 pt-5"
+            >
+                <div className="relative z-10 flex items-start gap-3.5">
+                    <div className="-mt-[52px] shrink-0">
+                        <div className="cg-vcard-face w-[72px] h-[72px] rounded-full overflow-hidden flex items-center justify-center bg-accent-tint">
+                            {t.profileImage ? (
+                                <img src={t.profileImage} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="font-display text-2xl font-semibold text-accent">
+                                    {t.name?.[0]?.toUpperCase()}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <p className="font-display text-lg font-semibold tracking-tight text-ink truncate flex items-center gap-1.5">
+                            {t.name}
+                            {onRoster && <BadgeCheck className="w-4 h-4 text-accent shrink-0" />}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            {t.skills?.[0] && (
+                                <span className="cg-pill bg-accent-tint text-accent font-medium normal-case">
+                                    {t.skills[0]}
+                                </span>
+                            )}
+                            <span className={"cg-pill font-medium normal-case " + (onRoster ? LIVE_TAG[t.liveStatus] : tag?.cls)}>
+                                {onRoster ? LIVE_LABELS[t.liveStatus] : tag?.label}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="relative z-10 flex items-center gap-x-5 gap-y-2 flex-wrap mt-5">
+                    {onRoster ? (
+                        <>
+                            <span className="cg-fact">
+                                <Briefcase className="w-4 h-4 text-accent shrink-0" />
+                                <strong>{t.completedJobs || 0}</strong> jobs
+                            </span>
+                            <span className="cg-fact">
+                                <Star className="w-4 h-4 text-warn shrink-0 fill-current" />
+                                <strong>{t.rating?.toFixed(1) || "5.0"}</strong> rating
+                            </span>
+                        </>
+                    ) : (
+                        <span className="cg-fact">
+                            <Clock className="w-4 h-4 text-ink-faint shrink-0" />
+                            {view === "pending" ? "Applied " + timeAgo(t.createdAt) : "Not on the roster"}
+                        </span>
+                    )}
+                </div>
+
+                <p className="relative z-10 cg-fact mt-2 w-full">
+                    <MapPin className="w-4 h-4 text-brand shrink-0" />
+                    <span className="truncate">{t.area || "No area set"}</span>
+                </p>
+
+                <div className="relative z-10 flex items-center gap-2.5 mt-5">
+                    <span className="cg-btn cg-btn-primary rounded-full flex-1 py-3 transition-transform group-hover:scale-[1.01]">
+                        {action}
+                        <ChevronRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
+
+                    {/* The office rings and messages vendors all day. Stopped
+                        from bubbling, or dialling would open the panel too. */}
+                    {t.phone && (
+                        <>
+                            <RoundAction href={"tel:" + t.phone} label={"Call " + t.name}>
+                                <Phone className="w-4 h-4" />
+                            </RoundAction>
+                            <RoundAction href={"https://wa.me/91" + waNumber} label={"WhatsApp " + t.name}>
+                                <MessageCircle className="w-4 h-4" />
+                            </RoundAction>
+                        </>
+                    )}
+                </div>
+
+                {onRoster && !t.hasLocation && (
+                    <p className="relative z-10 text-[11px] text-warn mt-3 font-medium">
+                        No location set, so they will not show in nearby search
+                    </p>
+                )}
+            </div>
+        </div>
     );
 };
 

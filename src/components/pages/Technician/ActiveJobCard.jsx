@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api, getErrorMessage } from "../../services/api";
+import OtpGate from "../../ui/OtpGate";
 import { techSocket } from "../../services/socket";
 import RouteToCustomer from "./RouteToCustomer";
 import CustomDropdown from "../../ui/CustomDropdown";
@@ -17,6 +18,8 @@ const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
     const [panel, setPanel] = useState(null);
     const [error, setError] = useState("");
     const [startingWork, setStartingWork] = useState(false);
+    // Which door code is being asked for, if any: "start" or "close"
+    const [gate, setGate] = useState(null);
 
     if (!ticket) {
         return (
@@ -41,14 +44,23 @@ const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
     const isSplit = method === "split";
     const isCashInvoice = method === "cash" || isSplit;
 
-    const startWork = async () => {
+    /**
+     * Starting is gated on a code the customer reads out.
+     *
+     * The request is made from inside the dialog rather than here, so a wrong
+     * code surfaces on the keypad the technician is already looking at
+     * instead of behind a closed dialog on the card underneath.
+     */
+    const startWork = async (otp) => {
         setError("");
         setStartingWork(true);
         try {
-            await api.post("/technician/tickets/" + ticket._id + "/start-work");
+            await api.post("/technician/tickets/" + ticket._id + "/start-work", { otp });
+            setGate(null);
             await onUpdate();
         } catch (err) {
             setError(getErrorMessage(err, "Could not start work"));
+            throw err;
         } finally {
             // Always cleared, even on success. The refetch normally brings the
             // ticket back as "In progress" and this button disappears anyway -
@@ -204,8 +216,8 @@ const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
                     <JobActions
                         ticket={ticket}
                         isCashInvoice={isCashInvoice}
-                        startWork={startWork}
                         startingWork={startingWork}
+                        openStart={() => setGate("start")}
                         setPanel={setPanel}
                         onHold={onHold}
                     />
@@ -230,6 +242,19 @@ const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
             {panel === "payment" && (
                 <PaymentStatusModal ticket={ticket} onClose={() => setPanel(null)} onDone={() => { setPanel(null); onUpdate(); }} />
             )}
+
+            {/* The customer's word, before the clock starts */}
+            {gate === "start" && (
+                <OtpGate
+                    ticketId={ticket._id}
+                    purpose="start"
+                    title="Ask the customer for their code"
+                    note="We have sent six digits to their WhatsApp. They read it out, you type it in, and the job starts."
+                    actionLabel="Start work"
+                    onVerified={startWork}
+                    onClose={() => setGate(null)}
+                />
+            )}
         </div>
     );
 };
@@ -239,7 +264,7 @@ const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
  * different columns on desktop and mobile. Keeping them in one component
  * means a change to any action only has to be made once.
  */
-const JobActions = ({ ticket, isCashInvoice, startWork, startingWork, setPanel, onHold }) => (
+const JobActions = ({ ticket, isCashInvoice, openStart, startingWork, setPanel, onHold }) => (
     <>
         {onHold ? (
             <p className="w-full text-center text-sm text-ink-soft py-2">
@@ -249,7 +274,7 @@ const JobActions = ({ ticket, isCashInvoice, startWork, startingWork, setPanel, 
         <>
         {ticket.status === "Assigned" && (
             <button
-                onClick={startWork}
+                onClick={openStart}
                 disabled={startingWork}
                 className="cg-btn cg-btn-go flex-1 min-w-[160px] py-3"
             >
@@ -486,6 +511,8 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
     const [workDone, setWorkDone] = useState(isEdit ? (existing.workDone || "") : "");
     const [paymentMethod, setPaymentMethod] = useState(isEdit ? (ticket.payment?.method || "online") : "online");
     const [editReason, setEditReason] = useState("");
+    // The customer confirms the work is finished before a bill exists
+    const [showCloseGate, setShowCloseGate] = useState(false);
     const [commissionPercent, setCommissionPercent] = useState(null);
     const [editLimit, setEditLimit] = useState(3);
     const [onlineAvailable, setOnlineAvailable] = useState(true);
@@ -566,7 +593,7 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
     const customTotal = customItems.reduce((sum, i) => sum + (Number(i.amountRupees) || 0), 0);
     const total = catalogTotal + customTotal;
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (otp) => {
         setFormError("");
         const validCustom = customItems.filter((i) => i.description.trim() && Number(i.amountRupees) > 0);
         const catalogPayload = Object.entries(selected).map(([id, qty]) => ({ id, qty }));
@@ -581,10 +608,20 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
             return;
         }
 
+        // Raising the first bill on a job is the moment he declares the work
+        // finished, so the customer confirms it. Editing a bill that already
+        // exists does not ask again - the code is about the work being done,
+        // not about the arithmetic.
+        if (!isEdit && !otp) {
+            setShowCloseGate(true);
+            return;
+        }
+
         setSubmitting(true);
         onError("");
         try {
             await api.post("/technician/tickets/generateBill", {
+                ...(otp ? { otp } : {}),
                 ticketId: ticket._id,
                 serviceKey: selectedServiceKey,
                 catalogItems: catalogPayload,
@@ -600,6 +637,7 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
         } catch (err) {
             onError(getErrorMessage(err, "Could not generate the invoice"));
             setSubmitting(false);
+            throw err;
         }
     };
 
@@ -885,7 +923,7 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                         <span className="text-xl font-bold text-ink">Rs {total.toFixed(2)}</span>
                     </div>
                     <button
-                        onClick={handleSubmit}
+                        onClick={() => handleSubmit()}
                         disabled={submitting || total === 0}
                         className="w-full flex items-center justify-center gap-2 bg-ink hover:bg-black disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm"
                     >
@@ -898,6 +936,24 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                     </button>
                 </div>
             </div>
+
+            {/* The customer agrees the work is done before a figure exists.
+                The code goes straight into the same request, so nothing is
+                held in state between them reading it out and the bill going. */}
+            {showCloseGate && (
+                <OtpGate
+                    ticketId={ticket._id}
+                    purpose="close"
+                    title="Ask the customer to confirm"
+                    note="Six digits have gone to their WhatsApp. They share it once they are happy the work is finished."
+                    actionLabel="Confirm and bill"
+                    onVerified={async (code) => {
+                        await handleSubmit(code);
+                        setShowCloseGate(false);
+                    }}
+                    onClose={() => setShowCloseGate(false)}
+                />
+            )}
         </div>
     );
 };

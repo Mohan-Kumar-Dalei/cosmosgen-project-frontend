@@ -87,9 +87,13 @@ const TechnicianPanel = () => {
         }
     }, [data, navigate]);
 
+    /**
+     * Handlers live for as long as the panel does; the connection itself is
+     * decided separately, below. Registering them here and connecting there
+     * means a vendor going online and offline all morning re-uses one set of
+     * listeners instead of tearing them down and rebuilding them each time.
+     */
     useEffect(() => {
-        connectTechSocket();
-
         const onAssigned = (p) => {
             loadBootstrap();
             setTab("active");
@@ -131,6 +135,15 @@ const TechnicianPanel = () => {
         };
 
         const onBalance = () => loadBootstrap();
+
+        // The office switch, or another tab of his own, has put him offline.
+        // Disconnecting here rather than letting the server cut the socket is
+        // deliberate: a socket the server drops is one socket.io immediately
+        // dials back, and the two would fight.
+        const onSessionOffline = () => {
+            disconnectTechSocket();
+            loadBootstrap();
+        };
 
         // He cannot work on a blocked account, so leaving him on a panel that
         // looks normal only means every button he presses fails.
@@ -177,6 +190,7 @@ const TechnicianPanel = () => {
         techSocket.on("cash:verified", onCashVerified);
         techSocket.on("ride:arrived", onArrived);
         techSocket.on("account:blocked", onBlocked);
+        techSocket.on("session:offline", onSessionOffline);
 
         // Nothing above fires for anything that happened while the socket was
         // down, because none of it was replayed. This is what covers that gap.
@@ -193,10 +207,35 @@ const TechnicianPanel = () => {
             techSocket.off("cash:verified", onCashVerified);
             techSocket.off("ride:arrived", onArrived);
             techSocket.off("account:blocked", onBlocked);
+            techSocket.off("session:offline", onSessionOffline);
             stopResume();
-            disconnectTechSocket();
         };
     }, [loadBootstrap, navigate]);
+
+    /**
+     * A socket only while there is something to hear.
+     *
+     * An offline vendor is not being assigned work, so holding a live
+     * connection for him costs the server a socket and tells it nothing. This
+     * follows the same rule the location watcher does: online, or on a job he
+     * is already driving to.
+     *
+     * onLiveResume re-reads the panel whenever the connection comes back, so
+     * anything that happened while he was offline is picked up the moment he
+     * returns - there is no gap to patch by hand.
+     */
+    useEffect(() => {
+        const shouldConnect =
+            data?.profile?.isAvailable ||
+            Boolean(data?.profile?.activeTicket) ||
+            Boolean(data?.activeTicket?._id);
+
+        if (shouldConnect) connectTechSocket();
+        else disconnectTechSocket();
+    }, [data?.profile?.isAvailable, data?.profile?.activeTicket, data?.activeTicket?._id]);
+
+    // Leaving the panel always drops the socket, whatever the status was
+    useEffect(() => () => disconnectTechSocket(), []);
 
     // Share location while online. The socket handler throttles DB writes to
     // one every 10 seconds, so leaving watchPosition running is fine.
@@ -251,6 +290,9 @@ const TechnicianPanel = () => {
     };
 
     const handleLogout = async () => {
+        // Same as the backoffice: end the connection on the way out rather
+        // than leaving it to the unmount that follows.
+        disconnectTechSocket();
         try {
             await api.post("/technician/logout");
         } catch {

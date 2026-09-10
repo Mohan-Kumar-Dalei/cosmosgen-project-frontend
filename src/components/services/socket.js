@@ -86,6 +86,24 @@ export const techSocket = createRoleSocket("technician");
 export const connectTechSocket = () => techSocket.connect();
 export const disconnectTechSocket = () => techSocket.disconnect();
 
+/**
+ * A customer following a job from a WhatsApp link.
+ *
+ * Built per page rather than as a module singleton, because the credential is
+ * the token in the URL and each link is a different one. Everything else here
+ * authenticates with a cookie; this is the one that cannot.
+ */
+export const createTrackSocket = (token) => {
+    const s = io(SOCKET_URL, {
+        withCredentials: false,
+        autoConnect: false,
+        transports: ["websocket", "polling"],
+        auth: { role: "track", token },
+    });
+    s.on("connect_error", (err) => console.error("[SOCKET:track] connect_error:", err.message));
+    return s;
+};
+
 // Admin panel
 export const adminSocket = createRoleSocket("admin");
 export const connectAdminSocket = () => adminSocket.connect();

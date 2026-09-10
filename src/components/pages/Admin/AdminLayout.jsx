@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "./adminAuthContext";
 import { useAdminData } from "./AdminDataContext";
-import { adminSocket, connectAdminSocket, onLiveResume } from "../../services/socket";
+import { adminSocket, connectAdminSocket, disconnectAdminSocket, onLiveResume } from "../../services/socket";
 import { notifyNew, notifyAlert, notifyInfo } from "../../services/notify";
 import NotifyBadge from "../../ui/NotifyBadge";
 import {
@@ -164,10 +164,20 @@ const AdminLayout = ({ children }) => {
             adminSocket.off("wallet:updated", onWallet);
             adminSocket.off("technician:new", onTechApplied);
             stopResume();
+            // Deliberately not disconnected here. AdminLayout is rendered by
+            // every page, so it unmounts and remounts on each navigation -
+            // dropping the socket here would mean a fresh handshake every time
+            // somebody clicks a nav item, and events lost in the gap. Sign out
+            // closes it explicitly, and a 401 redirect is a full page load,
+            // which takes the connection with it.
         };
     }, [refreshCounts, bumpCount, navigate, basePath]);
 
     const handleLogout = async () => {
+        // Dropped here as well as on unmount. Signing out should end the
+        // connection there and then rather than depend on which order React
+        // happens to tear this tree down in.
+        disconnectAdminSocket();
         await logout();
         navigate("/admin/login");
     };

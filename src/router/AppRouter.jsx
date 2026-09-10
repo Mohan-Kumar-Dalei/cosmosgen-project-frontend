@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AdminProtectedRoute } from "../components/pages/Protected/ProtectedRoute";
 
 const CustomerDemo = lazy(() => import("../components/pages/CustomerDemo"));
+const CustomerTracking = lazy(() => import("../components/pages/CustomerTracking"));
 const TechnicianPanel = lazy(() => import("../components/pages/Technician/TechnicianPanel"));
 const TechnicianRegister = lazy(() => import("../components/pages/Technician/TechnicianRegister"));
 const TechnicianLogin = lazy(() => import("../components/pages/Technician/TechnicianLogin"));
@@ -80,6 +81,11 @@ const AppRouter = () => {
                     <Routes>
                         {/* Customer */}
                         <Route path="/chat" element={<CustomerDemo />} />
+
+                        {/* Public. The token in the path is the credential -
+                            the customer followed this link from WhatsApp and
+                            has no account to sign in to. */}
+                        <Route path="/track/:token" element={<CustomerTracking />} />
 
                         {/* Technician */}
                         <Route path="/technician/admin/register" element={<TechnicianRegister />} />

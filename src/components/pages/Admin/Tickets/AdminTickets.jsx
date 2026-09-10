@@ -165,6 +165,7 @@ const AdminTickets = () => {
         adminSocket.on("ticket:customer-refused", onRefresh);
         adminSocket.on("ticket:taken", onRefresh);
         adminSocket.on("payment:collected", onRefresh);
+        adminSocket.on("call:availability", onRefresh);
 
         return () => {
             adminSocket.off("ticket:new", onNewTicket);
@@ -173,6 +174,7 @@ const AdminTickets = () => {
             adminSocket.off("ticket:customer-refused", onRefresh);
             adminSocket.off("ticket:taken", onRefresh);
             adminSocket.off("payment:collected", onRefresh);
+            adminSocket.off("call:availability", onRefresh);
         };
     }, [tab, loadTickets]);
     const handleUpdated = () => {
@@ -319,6 +321,60 @@ const AdminTickets = () => {
 /* DETAIL MODAL                                                        */
 /* ================================================================== */
 
+/**
+ * What the customer said when we rang them, as one line.
+ *
+ * The office does not want three booleans and a free text field; it wants to
+ * glance at a ticket and know whether anyone will be home. So the fields are
+ * turned into the sentence a person would say.
+ */
+const availabilityLine = (check) => {
+    if (!check?.calledAt) return null;
+
+    if (check.wantsCancel) {
+        return { text: "Customer wants to cancel the ticket", tone: "danger" };
+    }
+
+    if (check.available === true) {
+        return { text: "Customer available today", tone: "ok" };
+    }
+
+    if (check.available === false) {
+        const when = [check.preferredDay, check.preferredTime].filter(Boolean).join(", ");
+        return {
+            text: when
+                ? "Customer not available today. Reschedule to " + when
+                : "Customer not available today",
+            tone: "warn",
+        };
+    }
+
+    // Dialled, but nobody has answered yet
+    return { text: "Calling the customer now", tone: "muted" };
+};
+
+const CallResult = ({ check }) => {
+    const line = availabilityLine(check);
+    if (!line) return null;
+
+    const skin = {
+        ok: "bg-success-tint text-success",
+        warn: "bg-warn-tint text-warn",
+        danger: "bg-danger-tint text-danger",
+        muted: "bg-sunken text-ink-soft",
+    }[line.tone];
+
+    return (
+        <div className={"flex items-start gap-2 rounded-xl p-3 mb-4 text-sm font-medium " + skin}>
+            <PhoneCall className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+                <p>{line.text}</p>
+                {check.note && <p className="text-xs opacity-80 mt-0.5">{check.note}</p>}
+            </div>
+        </div>
+    );
+};
+
 const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
     const [ticket, setTicket] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -340,6 +396,45 @@ const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
         };
         load();
     }, [ticketId]);
+
+    const [calling, setCalling] = useState(false);
+
+    const reload = useCallback(async () => {
+        try {
+            const res = await api.get("/admin/tickets/" + ticketId);
+            setTicket(res.data.data);
+        } catch {
+            // The list behind this refreshes anyway
+        }
+    }, [ticketId]);
+
+    /**
+     * The answer arrives a minute after the button is pressed, over the
+     * socket, because the customer has to actually be spoken to first.
+     */
+    useEffect(() => {
+        const onAnswered = (data) => {
+            if (String(data?.ticketId) !== String(ticketId)) return;
+            setCalling(false);
+            reload();
+            onUpdated?.();
+        };
+
+        adminSocket.on("call:availability", onAnswered);
+        return () => adminSocket.off("call:availability", onAnswered);
+    }, [ticketId, reload, onUpdated]);
+
+    const callCustomer = async () => {
+        setActionError("");
+        setCalling(true);
+        try {
+            await api.post("/admin/tickets/" + ticketId + "/call");
+            await reload();
+        } catch (err) {
+            setCalling(false);
+            setActionError(getErrorMessage(err, "Could not place the call"));
+        }
+    };
 
     const onRefusalDone = async () => {
         try {
@@ -553,6 +648,8 @@ const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
                                 </div>
                             )}
 
+                            <CallResult check={ticket.availabilityCheck} />
+
                             {actionError && (
                                 <div className="mb-4 p-3 bg-danger-tint border border-hairline rounded-lg text-sm text-danger">
                                     {actionError}
@@ -578,6 +675,20 @@ const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
                                     >
                                         <CalendarDays className="w-4 h-4" />
                                         Reschedule
+                                    </button>
+                                )}
+
+                                {(isPending || ticket.status === "Queued" || ticket.status === "Assigned") && (
+                                    <button
+                                        onClick={callCustomer}
+                                        disabled={calling}
+                                        title="Ask the customer whether today suits them"
+                                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-ink border border-hairline rounded-lg hover:bg-sunken disabled:opacity-40"
+                                    >
+                                        {calling
+                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                            : <PhoneCall className="w-4 h-4" />}
+                                        {calling ? "Calling" : "Call customer"}
                                     </button>
                                 )}
 
