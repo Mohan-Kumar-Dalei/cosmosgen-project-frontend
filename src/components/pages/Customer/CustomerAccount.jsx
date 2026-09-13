@@ -6,6 +6,8 @@ import {
     Phone,
     ReceiptText,
     ArrowRight,
+    Search,
+    X,
     ShieldCheck,
     LogOut,
     Clock,
@@ -262,10 +264,25 @@ const SignIn = () => {
 /* SIGNED IN - the running jobs, then the finished ones                 */
 /* ================================================================== */
 
+/** Everything about one job that somebody might reasonably type. */
+const haystack = (job) => [
+    job.ticketNumber,
+    job.serviceLabel,
+    job.problemDescription,
+    job.technician?.name,
+    job.bill?.invoiceNumber,
+    ...(job.selectedIssues || []),
+].filter(Boolean).join(" ").toLowerCase();
+
 const SignedIn = ({ customer, onSignOut }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    // Filtered in the browser rather than at the server: every job this
+    // customer has already arrived in one request, so a round trip per
+    // keystroke would be fetching something that is sitting in memory.
+    const [term, setTerm] = useState("");
 
     const load = useCallback(async () => {
         try {
@@ -281,8 +298,14 @@ const SignedIn = ({ customer, onSignOut }) => {
 
     useEffect(() => { load(); }, [load]);
 
-    const open = data?.open || [];
-    const closed = data?.closed || [];
+    const query = term.trim().toLowerCase();
+    const match = (job) => !query || haystack(job).includes(query);
+
+    const allOpen = data?.open || [];
+    const allClosed = data?.closed || [];
+    const open = allOpen.filter(match);
+    const closed = allClosed.filter(match);
+    const total = allOpen.length + allClosed.length;
 
     return (
         <>
@@ -343,15 +366,60 @@ const SignedIn = ({ customer, onSignOut }) => {
                     </div>
                 ) : (
                     <>
+                        {/*
+                          * The search, above both lists rather than inside one.
+                          *
+                          * What people come back here for is a single job from
+                          * months ago - the invoice for the geyser, the name of
+                          * whoever fixed the fridge - and scrolling a year of
+                          * them to find it is the part that makes an account
+                          * page feel like a filing cabinet.
+                          */}
+                        {total > 0 && (
+                            <div className="mb-8 flex flex-wrap items-center gap-3">
+                                <div className="flex-1 min-w-[240px] flex items-center gap-2.5 h-12 px-4 rounded-full border border-hairline-strong bg-surface focus-within:border-accent transition-colors">
+                                    <Search className="w-4 h-4 shrink-0 text-ink-faint" />
+                                    <input
+                                        value={term}
+                                        onChange={(e) => setTerm(e.target.value)}
+                                        placeholder="Search your jobs - service, invoice, engineer"
+                                        className="flex-1 bg-transparent outline-none text-[14.5px] placeholder:text-ink-faint"
+                                    />
+                                    {term && (
+                                        <button
+                                            onClick={() => setTerm("")}
+                                            aria-label="Clear the search"
+                                            className="shrink-0 w-6 h-6 grid place-items-center rounded-full text-ink-soft hover:bg-sunken"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {query && (
+                                    <p className="text-[13.5px] text-ink-soft">
+                                        <span className="font-semibold text-ink tabular-nums">
+                                            {open.length + closed.length}
+                                        </span>
+                                        {" "}of {total}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
                         <h2 className="font-display font-semibold text-xl tracking-[-0.01em]">
                             Running now
                         </h2>
 
                         {open.length === 0 ? (
                             <div className="mt-4 rounded-[28px] bg-surface p-10 text-center shadow-card">
-                                <p className="font-semibold text-ink">Nothing running</p>
+                                <p className="font-semibold text-ink">
+                                    {query ? "Nothing running matches that" : "Nothing running"}
+                                </p>
                                 <p className="mt-1.5 text-sm text-ink-soft max-w-sm mx-auto">
-                                    Message us on WhatsApp and we will send somebody out.
+                                    {query
+                                        ? "Try the service name, the invoice number, or who came."
+                                        : "Message us on WhatsApp and we will send somebody out."}
                                 </p>
                             </div>
                         ) : (
@@ -360,7 +428,7 @@ const SignedIn = ({ customer, onSignOut }) => {
                             </div>
                         )}
 
-                        <History jobs={closed} />
+                        <History jobs={closed} query={query} />
                     </>
                 )}
             </section>
@@ -383,7 +451,7 @@ const rupees = (display) => Number(String(display || "0").replace(/[^0-9.]/g, ""
 
 const money = (amount) => amount.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-const History = ({ jobs }) => {
+const History = ({ jobs, query }) => {
     if (!jobs.length) {
         return (
             <>
@@ -391,7 +459,9 @@ const History = ({ jobs }) => {
                     Finished
                 </h2>
                 <p className="mt-4 text-sm text-ink-soft">
-                    Nothing here yet. Jobs appear once they are closed.
+                    {query
+                        ? "No finished job mentions that. Try the service name, the invoice number, or who came."
+                        : "Nothing here yet. Jobs appear once they are closed."}
                 </p>
             </>
         );

@@ -205,6 +205,32 @@ label[for] {
         background: #000;
     }
 
+    /* ---- the WhatsApp button ----
+
+       The only control on this site that sends somebody a message on
+       WhatsApp, and it is worth looking like it. Ink would have been
+       the house style and the wrong answer here: the whole point of
+       the change was that people were waiting for an SMS, and a
+       black button teaches nothing about where to look.
+
+       A gradient rather than a flat fill, because WhatsApp's own
+       green is flat and this should read as ours - their mark on our
+       button, not a copy of their button. */
+    .cg-btn-whatsapp {
+        background-image: linear-gradient(135deg, #25d366 0%, #16a34a 55%, #0f8a3d 100%);
+        color: #fff;
+        box-shadow: 0 1px 2px rgba(15, 138, 61, 0.35);
+    }
+
+    .cg-btn-whatsapp:hover:not(:disabled) {
+        background-image: linear-gradient(135deg, #2ee06f 0%, #18ad50 55%, #12a047 100%);
+    }
+
+    /* Nothing for the disabled state: every other button on this panel
+       just goes to half opacity, and a green at half opacity reads as
+       "not yet" perfectly well. The override that was here painted it
+       flat and left white text on a pale ground. */
+
     /* Green is the colour of a thing being completed, not of every button.
        Spending it on "Save" as well left nothing louder for "Verify". */
     .cg-btn-go {

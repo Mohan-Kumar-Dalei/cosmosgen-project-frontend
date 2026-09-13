@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api, getErrorMessage } from "../../services/api";
-import { sendOtp, cleanupOtp, otpErrorMessage } from "../../services/firebase";
+import { WhatsAppMark } from "../Customer/Marks";
 import {
     Eye, EyeOff, MapPin, CheckCircle2, AlertCircle,
-    Loader2, Truck, Phone, ArrowLeft, ArrowRight, Landmark,
+    Loader2, Truck, ArrowLeft, ArrowRight, Landmark,
     ShieldCheck, Navigation, Camera, User
 } from "lucide-react";
 
@@ -34,8 +34,19 @@ const TechnicianRegister = () => {
     // Phase 1
     const [phone, setPhone] = useState("");
     const [otp, setOtp] = useState("");
-    const [confirmation, setConfirmation] = useState(null);
-    const [idToken, setIdToken] = useState(null);
+    /*
+     * The code is ours now, not Firebase's.
+     *
+     * The app has always verified a vendor with a six digit code sent on
+     * WhatsApp and checked by this server; the web panel was the odd one out,
+     * standing up a whole Firebase phone-auth flow - an SMS bill, a reCAPTCHA
+     * in the corner of the page, and a second definition of "this number is
+     * really yours" - to reach the same place. `sent` is whether a code is
+     * outstanding, and `phoneToken` is what the server hands back once it has
+     * been proved.
+     */
+    const [sent, setSent] = useState(false);
+    const [phoneToken, setPhoneToken] = useState(null);
     const [resendIn, setResendIn] = useState(0);
 
     const [form, setForm] = useState({
@@ -76,7 +87,6 @@ const TechnicianRegister = () => {
 
     const ifscTimer = useRef(null);
 
-    useEffect(() => () => cleanupOtp(), []);
 
     useEffect(() => {
         if (resendIn <= 0) return;
@@ -96,11 +106,12 @@ const TechnicianRegister = () => {
         setError("");
 
         try {
-            const conf = await sendOtp(phone);
-            setConfirmation(conf);
-            setResendIn(45);
+            const res = await api.post("/technician/signup-otp", { phone });
+
+            setSent(true);
+            setResendIn(res.data.data?.retryAfter || 45);
         } catch (err) {
-            setError(otpErrorMessage(err));
+            setError(getErrorMessage(err, "Could not send the code"));
         } finally {
             setBusy(false);
         }
@@ -116,24 +127,17 @@ const TechnicianRegister = () => {
         setError("");
 
         try {
-            const result = await confirmation.confirm(otp);
-            const token = await result.user.getIdToken();
+            const res = await api.post("/technician/signup-otp/verify", { phone, code: otp });
 
-            const res = await api.post("/technician/verify-phone", { idToken: token });
-
-            setIdToken(token);
+            setPhoneToken(res.data.data.phoneToken);
             setStep(2);
-            cleanupOtp();
 
             if (res.data.data?.phone) setPhone(res.data.data.phone);
         } catch (err) {
-            if (err.response) {
-                setError(getErrorMessage(err, "Could not verify that number"));
-                if (err.response.data?.alreadyRegistered) {
-                    setTimeout(() => navigate("/technician/admin/login"), 2500);
-                }
-            } else {
-                setError(otpErrorMessage(err));
+            setError(getErrorMessage(err, "Could not verify that number"));
+
+            if (err.response?.data?.alreadyRegistered) {
+                setTimeout(() => navigate("/technician/admin/login"), 2500);
             }
         } finally {
             setBusy(false);
@@ -304,7 +308,7 @@ const TechnicianRegister = () => {
 
         try {
             const formData = new FormData();
-            formData.append("idToken", idToken);
+            formData.append("phoneToken", phoneToken);
             formData.append("name", form.name);
             formData.append("password", form.password);
             if (form.email) formData.append("email", form.email);
@@ -339,7 +343,8 @@ const TechnicianRegister = () => {
         } catch (err) {
             setError(getErrorMessage(err, "Registration failed"));
             if (err.response?.status === 401) {
-                setTimeout(() => { setStep(1); setIdToken(null); setConfirmation(null); }, 2500);
+                // The proof of the number has expired, so it is asked for again
+                setTimeout(() => { setStep(1); setPhoneToken(null); setSent(false); }, 2500);
             }
         } finally {
             setBusy(false);
@@ -450,16 +455,16 @@ const TechnicianRegister = () => {
                         <>
                             <div className="mb-6 2xl:mb-8">
                                 <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-ink mb-2 tracking-tight">
-                                    {confirmation ? "Enter the code" : "Join as a vendor"}
+                                    {sent ? "Enter the code" : "Join as a vendor"}
                                 </h1>
                                 <p className="text-ink-soft text-sm 2xl:text-base">
-                                    {confirmation
+                                    {sent
                                         ? "We sent a 6-digit code to +91 " + phone
                                         : "We'll send a code to confirm your number."}
                                 </p>
                             </div>
 
-                            {!confirmation ? (
+                            {!sent ? (
                                 <>
                                     <label className="cg-label block mb-2">
                                         Mobile number
@@ -479,16 +484,22 @@ const TechnicianRegister = () => {
                                         />
                                     </div>
                                     <p className="text-xs 2xl:text-sm text-ink-faint mb-5 2xl:mb-8">
-                                        You'll sign in with this number later.
+                                        We send six digits to this number on WhatsApp. You'll sign
+                                        in with it later.
                                     </p>
 
                                     <button
                                         onClick={handleSendOtp}
                                         disabled={busy || phone.length !== 10}
-                                        className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base"
+                                        className="cg-btn cg-btn-whatsapp w-full py-3 2xl:py-4 2xl:text-base"
                                     >
-                                        {busy ? <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin" /> : <Phone className="w-4 h-4 2xl:w-5 2xl:h-5" />}
-                                        Send code
+                                        {/* The button names the channel, because
+                                            somebody waiting for an SMS that is
+                                            never coming is a support call */}
+                                        {busy
+                                            ? <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin" />
+                                            : <WhatsAppMark className="w-4 h-4 2xl:w-5 2xl:h-5" />}
+                                        Send WhatsApp code
                                     </button>
                                 </>
                             ) : (
@@ -518,7 +529,7 @@ const TechnicianRegister = () => {
 
                                     <div className="flex items-center justify-between text-sm 2xl:text-base">
                                         <button
-                                            onClick={() => { setConfirmation(null); setOtp(""); setError(""); cleanupOtp(); }}
+                                            onClick={() => { setSent(false); setOtp(""); setError(""); }}
                                             className="text-ink-soft hover:text-ink font-medium"
                                         >
                                             Change number
@@ -528,13 +539,12 @@ const TechnicianRegister = () => {
                                             disabled={resendIn > 0 || busy}
                                             className="text-accent hover:text-accent-deep font-semibold disabled:text-ink-faint"
                                         >
-                                            {resendIn > 0 ? "Resend in " + resendIn + "s" : "Resend code"}
+                                            {resendIn > 0 ? "Resend in " + resendIn + "s" : "Resend on WhatsApp"}
                                         </button>
                                     </div>
                                 </>
                             )}
 
-                            <div id="recaptcha-container" />
                         </>
                     )}
 

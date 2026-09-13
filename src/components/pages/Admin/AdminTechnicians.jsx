@@ -43,6 +43,55 @@ const timeAgo = (dateStr) => {
     return Math.floor(hrs / 24) + "d ago";
 };
 
+
+/**
+ * How long a stretch has run, in the units somebody would say it in.
+ *
+ * Deliberately coarse. Whether a vendor went offline eleven or thirteen
+ * minutes ago is not a thing anybody dispatches on; whether it was this
+ * morning or last Tuesday is the whole question.
+ */
+const howLong = (ms) => {
+    if (!Number.isFinite(ms) || ms < 0) return "";
+
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return Math.max(1, mins) + " min";
+
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + (hrs === 1 ? " hour" : " hours");
+
+    const days = Math.floor(hrs / 24);
+    if (days < 14) return days + (days === 1 ? " day" : " days");
+
+    const weeks = Math.floor(days / 7);
+    return weeks + (weeks === 1 ? " week" : " weeks");
+};
+
+/**
+ * The sentence under a vendor's name about their comings and goings.
+ *
+ * `liveStatus` says what is true this second, which is enough to dispatch on
+ * and not enough to manage by: a vendor offline for an hour is on a break and
+ * one offline since Tuesday has quietly stopped working, and the panel showed
+ * those two identically. So the length of the current stretch is said out
+ * loud - and when somebody is back, how long they were away before it, which
+ * is the figure that turns "offline" into a pattern.
+ */
+const spell = (t) => {
+    if (t.liveStatus === "on_job") return "";
+
+    const since = t.availabilitySince ? new Date(t.availabilitySince).getTime() : 0;
+    const run = since ? howLong(Date.now() - since) : "";
+    const away = howLong(t.lastAwayMs);
+
+    if (t.liveStatus === "offline") {
+        return run ? "Offline for " + run : "";
+    }
+
+    if (!run) return "";
+    return "Free for " + run + (away ? ", back after " + away + " away" : "");
+};
+
 const AdminTechnicians = () => {
     // pendingCount used to come off this page's own list response, so the
     // sidebar knew nothing about an application and the tab only knew once
@@ -318,6 +367,16 @@ const VendorCard = ({ t, view, onOpen }) => {
                                 {onRoster ? LIVE_LABELS[t.liveStatus] : tag?.label}
                             </span>
                         </div>
+
+                        {/* Said quietly and only when there is something to
+                            say - a vendor who has never touched the switch has
+                            no stretch to report, and a blank is better than a
+                            zero */}
+                        {onRoster && spell(t) && (
+                            <p className={"text-[11.5px] mt-1 " + (t.liveStatus === "offline" ? "text-warn" : "text-ink-faint")}>
+                                {spell(t)}
+                            </p>
+                        )}
                     </div>
                 </div>
 

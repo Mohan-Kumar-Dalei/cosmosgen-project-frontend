@@ -926,16 +926,29 @@ const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
                     </button>
                 </div>
 
-                <div className="px-6 pt-3 flex gap-1 bg-sunken mx-6 mt-3 p-1 rounded-lg w-fit">
+                {/*
+                  * Underlined, like every other tab in this panel.
+                  *
+                  * These were grey pills wearing `cg-tab-on`, and that class
+                  * marks the current tab by colouring a bottom border - which
+                  * a pill does not have, so the chosen one looked exactly like
+                  * the other and the whole control read as two words sitting
+                  * on a grey bar. The panel's own rule, written above that
+                  * class, is that a row of grey pills is the most generic
+                  * thing an admin screen can wear. So this is the underline
+                  * the rest of the panel uses, and it works because the class
+                  * and the markup finally agree.
+                  */}
+                <div className="px-6 pt-3 flex gap-1 border-b border-hairline">
                     <button
                         onClick={() => searchNearby(radius)}
-                        className={"px-3 py-1.5 text-xs font-semibold rounded-md transition-colors " + (mode === "nearby" ? "cg-tab-on" : "")}
+                        className={"cg-tab " + (mode === "nearby" ? "cg-tab-on" : "")}
                     >
                         Near the customer
                     </button>
                     <button
                         onClick={() => searchArea(areaTerm)}
-                        className={"px-3 py-1.5 text-xs font-semibold rounded-md transition-colors " + (mode === "area" ? "cg-tab-on" : "")}
+                        className={"cg-tab " + (mode === "area" ? "cg-tab-on" : "")}
                     >
                         By city or area
                     </button>
@@ -1030,8 +1043,21 @@ const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-3 text-xs text-ink-soft mt-0.5">
-                                                <span className="flex items-center gap-0.5">
+                                            {/*
+                                              * Each fact stays whole; the row breaks between
+                                              * them, not through them.
+                                              *
+                                              * Adding the road distance and the drive time gave
+                                              * this line five things to hold in a panel that is
+                                              * only so wide, and without being told otherwise a
+                                              * flex row wraps inside its children - so it read
+                                              * as "0.05 km by / road" and "1 min / away", which
+                                              * is not a fact, it is debris. Nothing here is long
+                                              * enough to need hyphenating, so nothing is allowed
+                                              * to split.
+                                              */}
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft mt-1">
+                                                <span className="flex items-center gap-0.5 whitespace-nowrap">
                                                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                                                     {tech.rating?.toFixed(1) || "5.0"}
                                                 </span>
@@ -1043,12 +1069,12 @@ const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
                                                     dispatch on, so it is the one shown when it
                                                     is there, with the drive time beside it. */}
                                                 <span
-                                                    className={"flex items-center gap-0.5 " + (tech.roadKm != null ? "text-ink font-medium" : "")}
+                                                    className={"flex items-center gap-0.5 whitespace-nowrap " + (tech.roadKm != null ? "text-ink font-medium" : "")}
                                                     title={tech.roadKm != null
                                                         ? "By road. Straight line is " + tech.distanceKm + " km."
                                                         : "Straight line"}
                                                 >
-                                                    <Navigation className="w-3 h-3" />
+                                                    <Navigation className="w-3 h-3 shrink-0" />
                                                     {tech.roadKm != null
                                                         ? tech.roadKm + " km by road"
                                                         : tech.distanceKm != null
@@ -1057,22 +1083,33 @@ const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
                                                 </span>
 
                                                 {tech.roadSeconds != null && (
-                                                    <span className="flex items-center gap-0.5 text-ink font-medium">
-                                                        <Clock className="w-3 h-3" />
+                                                    <span className="flex items-center gap-0.5 whitespace-nowrap text-ink font-medium">
+                                                        <Clock className="w-3 h-3 shrink-0" />
                                                         {Math.max(1, Math.round(tech.roadSeconds / 60))} min away
                                                     </span>
                                                 )}
-                                                {/* How old that distance is. A technician who
-                                                    last opened the panel days ago is not really
-                                                    "0.02 km away" any more. */}
-                                                {tech.distanceKm != null && tech.lastLocationAt && (
-                                                    <span className={"flex items-center gap-0.5 " + (isStaleLocation(tech.lastLocationAt) ? "text-warn" : "")}>
-                                                        <Clock className="w-3 h-3" /> {timeAgo(tech.lastLocationAt)}
+                                                {/*
+                                                  * How old that distance is - but only when
+                                                  * that is news.
+                                                  *
+                                                  * A technician who last opened the panel days
+                                                  * ago is not really "0.02 km away" any more,
+                                                  * so the age has to be here. "just now" beside
+                                                  * a live position says nothing and was simply
+                                                  * another thing in a crowded line. Shown only
+                                                  * once it has gone stale, it stops being decor
+                                                  * and starts being a warning.
+                                                  */}
+                                                {tech.distanceKm != null
+                                                    && tech.lastLocationAt
+                                                    && isStaleLocation(tech.lastLocationAt) && (
+                                                    <span className="flex items-center gap-0.5 whitespace-nowrap text-warn">
+                                                        <Clock className="w-3 h-3 shrink-0" /> {timeAgo(tech.lastLocationAt)}
                                                     </span>
                                                 )}
                                                 {tech.scheduledJobs > 0 && (
-                                                    <span className="flex items-center gap-0.5 text-ink-soft">
-                                                        <CalendarDays className="w-3 h-3" /> {tech.scheduledJobs}
+                                                    <span className="flex items-center gap-0.5 whitespace-nowrap text-ink-soft">
+                                                        <CalendarDays className="w-3 h-3 shrink-0" /> {tech.scheduledJobs}
                                                     </span>
                                                 )}
                                             </div>
