@@ -1778,3 +1778,67 @@ label[for] {
 @media (prefers-reduced-motion: reduce) {
     .cg-navbar { transition: none; }
 }
+
+/* ---------------------------------------------------------------
+   A store badge takes the colour of wherever it is standing.
+
+   It was written for the app strip on the home page, which is a
+   near-black band, so it simply said `text-white` - and then it was
+   put in the masthead of the join page, which is paper in the light
+   theme. White on paper is nothing at all, and the badge read as an
+   empty outline with a Play Store logo floating in it.
+
+   The obvious repair was `color-mix(in srgb, currentColor 58%, ...)`,
+   and it is wrong in a way that only shows up in use: Chrome
+   resolves currentColor inside color-mix once, so the badge came out
+   right on a fresh load and then stayed the old colour when the
+   reader pressed the theme switch. A page whose theme button half
+   works is worse than one that is simply dark.
+
+   So: no colour is declared at all. The text inherits, an opacity
+   makes the unavailable one quieter, and the edge and the hover wash
+   are drawn as currentColor on layers of their own. Nothing here has
+   a colour to get out of step with.
+   --------------------------------------------------------------- */
+
+.cg-store {
+    position: relative;
+    border-color: transparent;
+}
+
+/* The edge */
+.cg-store::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid currentColor;
+    border-radius: inherit;
+    opacity: 0.24;
+    pointer-events: none;
+}
+
+/* And the wash under a pointer, on a layer so it tints the ground
+   rather than the words standing on it */
+.cg-store::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.cg-store > * {
+    position: relative;
+    z-index: 1;
+}
+
+.cg-store:not(.cg-store-off):hover::before { opacity: 0.08; }
+.cg-store:not(.cg-store-off):hover::after  { opacity: 0.36; }
+
+/* Not a link yet, so it is quieter - and quieter means less of
+   whatever colour this ground happens to be, never grey */
+.cg-store-off { opacity: 0.62; }
+.cg-store-off::after { opacity: 0.3; }

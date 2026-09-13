@@ -56,13 +56,13 @@ export const StoreBadge = ({ mark, small, name, href, disabled, note }) => {
         </>
     );
 
-    const shell = "inline-flex items-center gap-3 h-12 pl-4 pr-5 rounded-2xl border transition-colors";
+    const shell = "cg-store inline-flex items-center gap-3 h-12 pl-4 pr-5 rounded-2xl border transition-colors";
 
     if (disabled) {
         return (
             <span
                 title={note}
-                className={shell + " border-white/15 text-white/55 cursor-default"}
+                className={shell + " cg-store-off cursor-default"}
             >
                 {body}
             </span>
@@ -74,7 +74,7 @@ export const StoreBadge = ({ mark, small, name, href, disabled, note }) => {
             href={href}
             target="_blank"
             rel="noreferrer"
-            className={shell + " border-white/25 text-white hover:bg-white/10"}
+            className={shell}
         >
             {body}
         </a>
