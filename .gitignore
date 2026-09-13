@@ -11,6 +11,16 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Local env files.
+#
+# `*.env` was here and it does not do this job: it matches "production.env"
+# and not ".env" itself, which is the one that actually holds the keys - so
+# the file sat tracked in the repo with the Firebase and Maps browser keys in
+# it. Named outright now, both the file and its variants.
+.env
+.env.*
+!.env.example
 *.env
 
 # Editor directories and files
