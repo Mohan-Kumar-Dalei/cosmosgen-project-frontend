@@ -5,7 +5,7 @@ const API_BASE_URL =
     import.meta.env.VITE_API_URL ||
     (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
         ? "http://localhost:3000/api"
-        : "http://16.171.30.41:3000/api");
+        : "https://cosmosgen-api.duckdns.org");
 
 export const api = axios.create({
     baseURL: API_BASE_URL,
