@@ -1,16 +1,43 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
-const app = initializeApp({
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-});
+/**
+ * Built when somebody asks for a code, not when this file is imported.
+ *
+ * It used to run at import time, and that made a missing key fatal to a page
+ * that has not asked for Firebase yet: the registration screen imports this
+ * module, so a build without `VITE_FIREBASE_API_KEY` set threw before the
+ * screen could render, and a technician pressing "Register" got nothing at
+ * all rather than a form with one step that does not work. A module should
+ * not be able to take a page down by being imported.
+ */
+let auth = null;
 
-export const auth = getAuth(app);
-// SMS text follows the device language rather than the browser's default
-auth.languageCode = "en";
+const client = () => {
+    if (auth) return auth;
+
+    const config = {
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+        appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    };
+
+    if (!config.apiKey || !config.authDomain) {
+        // Said plainly, because the person who can fix this is the one
+        // deploying, and "auth/invalid-api-key" tells them nothing
+        throw new Error("This build has no Firebase settings, so codes cannot be sent.");
+    }
+
+    auth = getAuth(initializeApp(config));
+    // SMS text follows the device language rather than the browser's default
+    auth.languageCode = "en";
+
+    return auth;
+};
+
+/** Whether a code can be sent at all, for a screen that wants to say so. */
+export const otpIsConfigured = () => Boolean(import.meta.env.VITE_FIREBASE_API_KEY);
 
 /**
  * Firebase requires a reCAPTCHA before it will send an SMS. The invisible
@@ -30,14 +57,15 @@ const resetVerifier = () => {
 };
 
 export const sendOtp = async (phone10) => {
+    const client_ = client();
+
     resetVerifier();
 
-    verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+    verifier = new RecaptchaVerifier(client_, "recaptcha-container", {
         size: "invisible",
     });
 
-    const confirmation = await signInWithPhoneNumber(auth, "+91" + phone10, verifier);
-    return confirmation;
+    return signInWithPhoneNumber(client_, "+91" + phone10, verifier);
 };
 
 export const cleanupOtp = resetVerifier;

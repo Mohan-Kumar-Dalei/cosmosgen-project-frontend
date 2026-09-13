@@ -295,7 +295,7 @@ const CustomerHome = () => {
                             </div>
 
                             <Link
-                                to="/chat"
+                                to="/ai-assistant/chat"
                                 data-reveal
                                 className="group shrink-0 inline-flex items-center gap-2 h-12 px-6 rounded-full bg-accent text-white font-semibold text-[15px] hover:bg-accent-deep transition-colors"
                             >

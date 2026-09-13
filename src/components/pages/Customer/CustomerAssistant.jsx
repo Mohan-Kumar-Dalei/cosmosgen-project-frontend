@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowUp, Bot, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { WhatsAppMark } from "./Marks";
 import { api, getErrorMessage } from "../../services/api";
@@ -102,27 +102,62 @@ const CustomerAssistant = () => {
      * conversation where it was left. It is deliberately not kept for ever:
      * three days after the last thing said, the server throws it away.
      */
-    const [chatId, setChatId] = useState(() => {
-        try {
-            return localStorage.getItem(CHAT_KEY) || "";
-        } catch {
-            return "";
-        }
-    });
+    /*
+     * The conversation's id lives in the address bar.
+     *
+     * A thread is a real thing on the server that outlives the tab, so it is
+     * worth being able to point at: reopening it on another phone, or sending
+     * the link to the office when an answer has gone wrong, both come free
+     * once the id is in the URL. The stored copy stays as the fallback for
+     * somebody arriving at the bare page, and the URL wins when both exist,
+     * because the URL is what the reader actually asked for.
+     */
+    const { chatId: fromUrl } = useParams();
+    const navigate = useNavigate();
 
-    const thread = useRef(null);
-    const box = useRef(null);
+    /*
+     * Derived from the address, not held beside it.
+     *
+     * Keeping a copy in state as well meant the two could disagree - the back
+     * button moved one and not the other - and reconciling them needed an
+     * effect that set state on every change, which is a re-render chasing a
+     * re-render. One source of truth removes the whole problem: the URL says
+     * which conversation this is, and everything else follows from it.
+     */
+    const chatId = fromUrl || "";
 
     const remember = (id) => {
         if (!id || id === chatId) return;
-        setChatId(id);
+
         try { localStorage.setItem(CHAT_KEY, id); } catch { /* private window */ }
+
+        // Replaced rather than pushed: the first answer of a conversation
+        // should not put an empty version of the same page in the back button
+        navigate("/ai-assistant/chat/" + id, { replace: true });
     };
 
     const forget = () => {
-        setChatId("");
         try { localStorage.removeItem(CHAT_KEY); } catch { /* private window */ }
+        navigate("/ai-assistant/chat", { replace: true });
     };
+
+    /*
+     * Somebody arriving at the bare page with a thread already stored is sent
+     * to its address, so what they left off is what they come back to.
+     */
+    useEffect(() => {
+        if (fromUrl) return;
+
+        let stored = "";
+        try { stored = localStorage.getItem(CHAT_KEY) || ""; } catch { /* private window */ }
+
+        if (stored) navigate("/ai-assistant/chat/" + stored, { replace: true });
+        // Once, on arrival
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const thread = useRef(null);
+    const box = useRef(null);
 
     /*
      * What was said last time, if it is still there.

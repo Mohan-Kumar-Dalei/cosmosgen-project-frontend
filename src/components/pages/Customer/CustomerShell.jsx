@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, X, Smartphone, Volume2, VolumeX, Sun, Moon } from "lucide-react";
 import { WhatsAppMark } from "./Marks";
 import { useCustomer } from "./customerAuth";
 import { AreaPill, AreaForm } from "./AreaPicker";
 import { useInterfaceSounds, useSoundSetting, setSound } from "./sound";
+import { SoundInvite } from "./SoundInvite";
 import { useTheme, setTheme } from "./theme";
 import { useLiftedFooter } from "./motion";
 import { Blobs } from "./Blob";
@@ -28,11 +29,23 @@ const NAV = [
     // "Ask us" implied a person on the other end, and there is not one - the
     // assistant is the whole of it, and naming it is fairer than letting
     // somebody find that out after they have typed their question
-    { to: "/chat", label: "Ask AI" },
+    { to: "/ai-assistant/chat", label: "Ask AI" },
     // Who the company is, in the bar rather than three clicks down: a visitor
     // deciding whether to let a stranger into their house asks this early
     { to: "/about", label: "About us" },
 ];
+
+/*
+ * Where the bar was when the last page went away.
+ *
+ * Kept out here on purpose. Every page renders its own CustomerShell, so
+ * moving between them tears the header down and builds a new one - and a
+ * freshly created element has no previous position to travel from, which is
+ * exactly why the bar appeared at its destination instead of going there.
+ * Held at module level it survives the swap, so the new bar is born where the
+ * old one died and then moves.
+ */
+let lastMark = null;
 
 const MORE = [
     { to: "/faq", label: "Questions" },
@@ -55,6 +68,17 @@ export const CustomerShell = ({ children }) => {
     const { footer, page, lift } = useLiftedFooter();
     const [open, setOpen] = useState(false);
     const [lifted, setLifted] = useState(false);
+    /*
+     * Where the bar under the navigation is, and how wide.
+     *
+     * Measured rather than guessed: the labels are different lengths, the row
+     * re-gaps at xl, and the font swapping in moves everything by a few
+     * pixels. Null until the first measurement, so the bar is not drawn at all
+     * before it knows where it belongs.
+     */
+    const rail = useRef(null);
+    const [mark, setMark] = useState(lastMark);
+
     /* Which element carries the sheet's bottom edge: "band", "page" or none */
     const [ends, setEnds] = useState("");
 
@@ -193,6 +217,53 @@ export const CustomerShell = ({ children }) => {
     }, [pathname]);
 
     /*
+     * Re-measured on every navigation, and whenever the row could have moved.
+     *
+     * `aria-current` is what react-router puts on the active link, so this
+     * asks the DOM which link is current rather than working it out from the
+     * path a second time - one source of truth, and it cannot disagree with
+     * what the reader can see. Fonts land late and windows get dragged, so a
+     * resize and the font loading both ask again.
+     */
+    useEffect(() => {
+        const row = rail.current;
+        if (!row) return undefined;
+
+        const place = () => {
+            const current = row.querySelector("[aria-current='page']");
+
+            if (!current) {
+                lastMark = null;
+                return setMark(null);
+            }
+
+            /*
+             * Measuring is itself what makes the move possible: reading these
+             * boxes forces the browser to resolve the style the bar was just
+             * created with, so the value it is leaving is a real one. Set
+             * without that, the change would be the element's first style and
+             * a first style does not animate.
+             */
+            const a = current.getBoundingClientRect();
+            const b = row.getBoundingClientRect();
+
+            const next = { left: Math.round(a.left - b.left), width: Math.round(a.width) };
+
+            lastMark = next;
+            return setMark(next);
+        };
+
+        const settle = setTimeout(place);
+        window.addEventListener("resize", place);
+        document.fonts?.ready?.then(place).catch(() => { /* no font API */ });
+
+        return () => {
+            clearTimeout(settle);
+            window.removeEventListener("resize", place);
+        };
+    }, [pathname]);
+
+    /*
      * Nothing in the bar wraps.
      *
      * Adding a fifth item pushed the row past the space it had, and flex did
@@ -254,7 +325,17 @@ export const CustomerShell = ({ children }) => {
                         </span>
                     </Link>
 
-                    <nav className="hidden lg:flex items-center gap-5 xl:gap-6 ml-2 xl:ml-3 shrink-0">
+                    {/*
+                      * One bar that travels, rather than one per link.
+                      *
+                      * Each link used to own a rule that grew out of its own
+                      * middle while the last one shrank away - which reads as
+                      * two separate things happening, not as one thing moving.
+                      * A single bar measured onto whichever link is current
+                      * says what a change of page actually is: you were there,
+                      * now you are here, and this is the distance between them.
+                      */}
+                    <nav ref={rail} className="relative hidden lg:flex items-center gap-5 xl:gap-6 ml-2 xl:ml-3 shrink-0">
                         {NAV.map((l) => (
                             <NavLink
                                 key={l.to}
@@ -266,21 +347,20 @@ export const CustomerShell = ({ children }) => {
                                 onPointerEnter={() => warmRoute(l.to)}
                                 onTouchStart={() => warmRoute(l.to)}
                             >
-                                {({ isActive }) => (
-                                    <>
-                                        {l.label}
-                                        {/* Grows out from the middle rather than
-                                            appearing whole - the difference
-                                            between a state and a movement */}
-                                        <span
-                                            aria-hidden
-                                            className={"absolute left-0 right-0 -bottom-0.5 h-px origin-center bg-accent transition-transform duration-300 "
-                                                + (isActive ? "scale-x-100" : "scale-x-0")}
-                                        />
-                                    </>
-                                )}
+                                {l.label}
                             </NavLink>
                         ))}
+
+                        {/* Only drawn once there is something to sit under, so
+                            it never starts life parked at the left edge and
+                            slides in from nowhere on the first page */}
+                        {mark && (
+                            <span
+                                aria-hidden
+                                style={{ left: mark.left, width: mark.width }}
+                                className="cg-navbar absolute -bottom-0.5 h-px bg-accent"
+                            />
+                        )}
                     </nav>
 
                     <div className="ml-auto flex items-center gap-1 sm:gap-2">
@@ -290,6 +370,9 @@ export const CustomerShell = ({ children }) => {
                         <AreaPill />
 
                         <button
+                            // The invitation below the bar points at this, so
+                            // it has to be findable without knowing the markup
+                            data-sound-toggle
                             onClick={() => setSound(!audible)}
                             aria-label={audible ? "Turn the interface sounds off" : "Turn the interface sounds on"}
                             title={audible ? "Sound on" : "Sound off"}
@@ -446,6 +529,9 @@ export const CustomerShell = ({ children }) => {
             </main>
 
             <Footer inner={footer} lifted={Boolean(lift)} mark={ik(pics.LOGO, "w-96")} />
+
+            {/* Asked once, a few seconds in, and never again once answered */}
+            <SoundInvite />
         </div>
     );
 };
@@ -496,7 +582,7 @@ const Footer = ({ inner, lifted, mark }) => (
                         <Link to="/services" className="hover:text-white transition-colors">Services</Link>
                         <Link to="/how-it-works" className="hover:text-white transition-colors">How it works</Link>
                         <Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-                        <Link to="/chat" className="hover:text-white transition-colors">Ask AI</Link>
+                        <Link to="/ai-assistant/chat" className="hover:text-white transition-colors">Ask AI</Link>
                     </div>
                 </div>
 

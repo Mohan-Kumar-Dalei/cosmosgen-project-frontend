@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Wallet, MapPinned, CalendarClock, Smartphone, ShieldCheck } from "lucide-react";
-import { WhatsAppMark } from "./Marks";
+import { WhatsAppMark, PlayStoreMark, StoreBadge } from "./Marks";
 import { CustomerShell } from "./CustomerShell";
 import { PageHead, HeadStrip, Band, Head } from "./layout";
 import { Art } from "./Art";
 import { useHeroIntro, useReveal, useSmoothScroll } from "./motion";
-import { WHATSAPP_LINK } from "./brand";
+import { WHATSAPP_LINK, VENDOR_APP_LINK } from "./brand";
 import { useServiceImage } from "./catalogue";
 import { usePictures } from "./pictures";
 
@@ -111,6 +111,20 @@ const CustomerJoin = () => {
                             <WhatsAppMark className="w-[17px] h-[17px] transition-transform duration-300 group-hover:scale-110" />
                             Ask about joining
                         </a>
+
+                        {/* The engineer's own app, which is where the work
+                            actually arrives once somebody has joined. Honest
+                            about not being on the store yet rather than
+                            linking nowhere - and it is a different listing
+                            from the customer's app, so it has its own link */}
+                        <StoreBadge
+                            mark={<PlayStoreMark className="w-6 h-6" />}
+                            small={VENDOR_APP_LINK ? "Get the engineer app on" : "Coming soon to"}
+                            name="Google Play"
+                            href={VENDOR_APP_LINK}
+                            disabled={!VENDOR_APP_LINK}
+                            note="The engineer's Android app is in testing"
+                        />
                     </div>
                 </PageHead>
             </div>

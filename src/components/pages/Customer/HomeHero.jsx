@@ -91,8 +91,20 @@ export const HomeHero = () => {
                     figure - a cutout with nothing beneath it floats */}
                 <div
                     data-hero-art
+                    /*
+                     * The cap grows with the screen.
+                     *
+                     * It was a flat 520px below the composed layout, which is
+                     * the right size on a phone - there it never bites, the
+                     * width does - and steadily wrong above it. At 768 the
+                     * picture took 69% of the row and at 1024 barely half,
+                     * so the wider the tablet the smaller the group looked,
+                     * which is the opposite of what a masthead should do.
+                     * These keep it in the same band a phone gets.
+                     */
                     className="cg-stand order-2 xl:order-none pointer-events-none
                         mx-auto w-[min(100%,520px)]
+                        sm:w-[min(100%,600px)] md:w-[min(100%,660px)] lg:w-[min(100%,820px)]
                         xl:absolute xl:left-1/2 xl:-translate-x-1/2 xl:bottom-0
                         xl:w-auto xl:mx-0"
                 >
@@ -133,8 +145,30 @@ export const HomeHero = () => {
                             e.currentTarget.src = spare;
                         }
                     }}
-                    className="select-none w-full max-h-[56vh]
-                        xl:w-auto xl:h-[min(88vh,900px)] xl:max-h-none xl:max-w-[34vw] 2xl:max-w-[38vw]
+                    /* The height cap has to move with the width, or a wider
+                       tablet just letterboxes the same picture - `contain`
+                       gives back in width whatever the height takes away */
+                    /*
+                     * Sized by its width, because the picture is a wide one.
+                     *
+                     * The composed layout was written for the old artwork: a
+                     * single figure standing, taller than it was wide, so it
+                     * was given a height (88vh) and a narrow width cap (34vw)
+                     * and `contain` did the rest. The picture has since been
+                     * replaced with the group, which is landscape - and against
+                     * a tall narrow box a wide picture shrinks to fit the
+                     * width and leaves the height empty. On a landscape tablet
+                     * the box measured 464 by 676 with only 464 by 348 of
+                     * actual picture in it: a third of a screen of nothing,
+                     * and a group that looked small for no reason anybody
+                     * could see.
+                     *
+                     * So the width leads now and the height follows, with a
+                     * ceiling so a short screen is not swallowed whole.
+                     */
+                    className="select-none w-full max-h-[56vh] md:max-h-[64vh] lg:max-h-[72vh]
+                        xl:w-[52vw] xl:h-auto xl:max-w-none xl:max-h-[70vh]
+                        2xl:w-[46vw] 2xl:max-h-[76vh]
                         object-contain object-bottom"
                 />
                 </div>

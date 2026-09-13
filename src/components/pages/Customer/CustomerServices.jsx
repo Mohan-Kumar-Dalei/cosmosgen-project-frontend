@@ -101,7 +101,7 @@ const CustomerServices = () => {
                                 Book on WhatsApp
                             </a>
                             <Link
-                                to="/chat"
+                                to="/ai-assistant/chat"
                                 className="group inline-flex items-center gap-2 h-12 px-6 rounded-full text-ink font-semibold text-[15px] hover:bg-canvas transition-colors"
                             >
                                 Ask the assistant

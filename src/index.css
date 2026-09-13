@@ -1754,3 +1754,27 @@ label[for] {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: none; }
 }
+
+/* ---------------------------------------------------------------
+   The bar under the navigation, travelling.
+
+   Left and width rather than a transform, because the bar has to
+   change shape as well as move - "Pricing" and "How it works" are
+   not the same width, and a transform can only slide a fixed one.
+   Two properties animating is more than a transform costs, but this
+   is one thin rule moving once per page change, which is nothing.
+
+   The easing matters more than the duration: it leaves quickly and
+   arrives slowly, which is what makes a thing read as having
+   travelled rather than as having been redrawn somewhere else.
+   --------------------------------------------------------------- */
+
+.cg-navbar {
+    transition:
+        left 0.42s cubic-bezier(0.22, 0.61, 0.36, 1),
+        width 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-navbar { transition: none; }
+}

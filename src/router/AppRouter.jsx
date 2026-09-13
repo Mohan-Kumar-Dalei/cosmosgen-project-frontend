@@ -14,7 +14,7 @@ const CustomerHome = lazy(CUSTOMER_ROUTES["/"]);
 const CustomerServices = lazy(CUSTOMER_ROUTES["/services"]);
 const CustomerHowItWorks = lazy(CUSTOMER_ROUTES["/how-it-works"]);
 const CustomerAccount = lazy(CUSTOMER_ROUTES["/account"]);
-const CustomerAssistant = lazy(CUSTOMER_ROUTES["/chat"]);
+const CustomerAssistant = lazy(CUSTOMER_ROUTES["/ai-assistant/chat"]);
 const CustomerAbout = lazy(CUSTOMER_ROUTES["/about"]);
 const CustomerPricing = lazy(CUSTOMER_ROUTES["/pricing"]);
 const CustomerJoin = lazy(CUSTOMER_ROUTES["/join"]);
@@ -112,8 +112,31 @@ const AppRouter = () => {
                         <Route path="/" element={<CustomerHome />} />
                         <Route path="/services" element={<CustomerServices />} />
                         <Route path="/how-it-works" element={<CustomerHowItWorks />} />
+                        {/*
+                          * A customer's own jobs, at their own address.
+                          *
+                          * The id is theirs and the page is behind their
+                          * session, so it identifies the page rather than
+                          * granting anything: opening somebody else's id shows
+                          * you your own jobs, because the server answers the
+                          * cookie and not the URL.
+                          */}
                         <Route path="/account" element={<CustomerAccount />} />
-                        <Route path="/chat" element={<CustomerAssistant />} />
+                        <Route path="/account/:customerId" element={<CustomerAccount />} />
+                        {/*
+                          * The assistant lives under its own name, and carries
+                          * the conversation's id in the address.
+                          *
+                          * A thread is a real thing on the server that outlives
+                          * the tab, so it should be addressable: this is what
+                          * lets somebody reopen a conversation on another
+                          * device, or send it to the office when something has
+                          * gone wrong. The old `/chat` is kept as a redirect,
+                          * because it has been given out.
+                          */}
+                        <Route path="/ai-assistant/chat" element={<CustomerAssistant />} />
+                        <Route path="/ai-assistant/chat/:chatId" element={<CustomerAssistant />} />
+                        <Route path="/chat" element={<Navigate to="/ai-assistant/chat" replace />} />
                         <Route path="/about" element={<CustomerAbout />} />
                         <Route path="/pricing" element={<CustomerPricing />} />
                         <Route path="/join" element={<CustomerJoin />} />

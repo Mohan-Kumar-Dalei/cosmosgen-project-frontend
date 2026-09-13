@@ -180,7 +180,7 @@ const CustomerPricing = () => {
                 >
                     <div className="flex flex-wrap gap-3">
                         <Link
-                            to="/chat"
+                            to="/ai-assistant/chat"
                             className="group inline-flex items-center gap-2 h-12 px-6 rounded-full bg-accent text-white font-semibold text-[15px] hover:bg-accent-deep transition-colors"
                         >
                             Ask what your job involves
@@ -291,7 +291,7 @@ const CustomerPricing = () => {
                                 Book on WhatsApp
                             </a>
                             <Link
-                                to="/chat"
+                                to="/ai-assistant/chat"
                                 className="group inline-flex items-center gap-2 h-12 px-6 rounded-full border border-white/20 font-semibold text-[15px] hover:bg-white/10 transition-colors"
                             >
                                 Ask the assistant

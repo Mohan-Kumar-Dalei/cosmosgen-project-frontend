@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
     Loader2,
     MapPin,
@@ -42,6 +42,27 @@ const day = (value) =>
 const CustomerAccount = () => {
     useSmoothScroll();
     const { customer, ready, signOut } = useCustomer();
+
+    /*
+     * Once we know who this is, the address says so.
+     *
+     * `/account` is what every link on the site points at, because nothing
+     * knows the id until the session has been read - so the page arrives at
+     * the short address and moves itself to the long one the moment it can.
+     * Replaced rather than pushed, or the back button would land on the same
+     * page again.
+     *
+     * It identifies, it does not authorise: the server answers the cookie, so
+     * typing somebody else's id here shows you your own jobs.
+     */
+    const { customerId } = useParams();
+    const navigate = useNavigate();
+    const mine = customer?._id ? String(customer._id) : "";
+
+    useEffect(() => {
+        if (!ready || !mine || customerId === mine) return;
+        navigate("/account/" + mine, { replace: true });
+    }, [ready, mine, customerId, navigate]);
 
     return (
         <CustomerShell>

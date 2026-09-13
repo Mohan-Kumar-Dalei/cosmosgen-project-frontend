@@ -124,8 +124,17 @@ const NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER || "918260866144";
 export const WHATSAPP_LINK =
     "https://wa.me/" + NUMBER + "?text=" + encodeURIComponent("Hi Cosmosgen, I need help with");
 
-/** Where the app will live once it is on the store. */
+/** Where the customer's app will live once it is on the store. */
 export const APP_LINK = import.meta.env.VITE_APP_STORE_URL || "";
+
+/**
+ * And the engineer's app, which is a different listing.
+ *
+ * Two apps, two store pages: a customer who installs the vendor app by mistake
+ * gets a sign-in screen they cannot pass. Empty until the listing exists, and
+ * the badge that uses it says "coming soon" rather than linking nowhere.
+ */
+export const VENDOR_APP_LINK = import.meta.env.VITE_VENDOR_APP_STORE_URL || "";
 
 /**
  * Which tinted ground a drawing sits on, by its position in a list.

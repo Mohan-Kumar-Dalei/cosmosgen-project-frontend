@@ -136,7 +136,7 @@ const CustomerFaq = () => {
                 >
                     <div className="flex flex-wrap gap-3">
                         <Link
-                            to="/chat"
+                            to="/ai-assistant/chat"
                             className="group inline-flex items-center gap-2 h-12 px-6 rounded-full bg-accent text-white font-semibold text-[15px] hover:bg-accent-deep transition-colors"
                         >
                             <Bot className="w-4 h-4" />
