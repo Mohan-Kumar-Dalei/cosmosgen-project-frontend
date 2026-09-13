@@ -1,3 +1,4 @@
+import { ScooterMark } from "./Marks";
 import { ik } from "./brand";
 import { MapPin, ShieldCheck } from "lucide-react";
 import { usePictures } from "./pictures";
@@ -81,13 +82,18 @@ export const TrackingCard = () => {
                 </svg>
 
                 {/* The engineer, travelling the curve the road was drawn on, with
-                    the ring a live position always has around it */}
+                    the ring a live position always has around it.
+
+                    A vehicle rather than a dot. A blue circle on a map is a
+                    position and nothing else; the thing this panel is trying to
+                    say is that somebody is on their way to the door, and a
+                    scooter says that without a caption. The ring stays - that
+                    is the part which means "live" - but it pulses behind the
+                    vehicle instead of around a marker. */}
                 <span aria-hidden className="cg-runner">
-                    <span className="relative block w-7 h-7">
-                        <span className="cg-ping absolute inset-0 rounded-full bg-accent/30" />
-                        <span className="relative block w-7 h-7 rounded-full bg-accent shadow-lift grid place-items-center">
-                            <span className="block w-2.5 h-2.5 rounded-full bg-white" />
-                        </span>
+                    <span className="relative grid place-items-center w-7 h-7">
+                        <span className="cg-ping absolute inset-0 rounded-full bg-accent/25" />
+                        <ScooterMark className="relative w-[22px] h-[22px] text-accent cg-rider" />
                     </span>
                 </span>
 

@@ -1115,6 +1115,14 @@ label[for] {
     55%, 100% { stroke-dashoffset: 0; }
 }
 
+/* The vehicle itself, lifted off the map so it is not a shape lost in
+   the streets under it. A drop shadow rather than a box shadow: the
+   glyph is a silhouette, and a rectangle of shade behind it would put
+   back the card this stopped being. */
+.cg-rider {
+    filter: drop-shadow(0 2px 3px rgba(12, 20, 28, 0.3));
+}
+
 .cg-runner {
     position: absolute;
     top: 0;
@@ -1675,12 +1683,20 @@ label[for] {
     .cg-mesh-b,
     .cg-drift-a,
     .cg-drift-b,
-    .cg-ping,
-    .cg-route,
-    .cg-runner,
     .cg-rail {
         animation: none;
     }
+
+    /*
+     * The tracking demo is not on this list, and should never have been.
+     *
+     * Everything above is ambient - it is there so the page does not read as
+     * flat, and nobody looks at it. The vehicle travelling the route is the
+     * opposite: it is the page explaining what the live link does, and a
+     * reader is meant to watch it. Stopping it to save frames saved the wrong
+     * thing. It is three elements on a path, which is cheap wherever the rest
+     * of this is affordable at all.
+     */
 
     /* A layer promoted for an animation that no longer runs is a
        phone holding a large texture in memory for nothing */

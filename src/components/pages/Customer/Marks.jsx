@@ -80,3 +80,30 @@ export const StoreBadge = ({ mark, small, name, href, disabled, note }) => {
         </a>
     );
 };
+
+/**
+ * The scooter, for the engineer on their way.
+ *
+ * Drawn here rather than taken from the icon set because the set has a
+ * bicycle and this is not a bicycle - a technician in Odisha arrives on a
+ * two-wheeler with a toolbag, and the marker on the tracking map is the one
+ * place the site says so. Kept to four strokes: at the size it travels the
+ * route, anything more detailed turns to mush.
+ */
+export const ScooterMark = ({ className = "w-5 h-5" }) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+        className={className}
+    >
+        <circle cx="5.6" cy="16.6" r="3.2" />
+        <circle cx="18.2" cy="16.6" r="3.2" />
+        <path d="M8.8 16.6h6.2l-2.5-5.7H9.3" />
+        <path d="M12.5 10.9 15 6h2" />
+    </svg>
+);
