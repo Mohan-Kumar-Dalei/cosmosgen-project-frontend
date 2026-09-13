@@ -12,6 +12,7 @@ import {
     LogOut,
     Clock,
     CheckCircle2,
+    UserRound,
 } from "lucide-react";
 import { WhatsAppMark } from "./Marks";
 import { api, getErrorMessage } from "../../services/api";
@@ -43,7 +44,7 @@ const day = (value) =>
 
 const CustomerAccount = () => {
     useSmoothScroll();
-    const { customer, ready, signOut } = useCustomer();
+    const { customer, ready, signOut, setCustomer } = useCustomer();
 
     /*
      * Once we know who this is, the address says so.
@@ -72,6 +73,22 @@ const CustomerAccount = () => {
                 <div className="min-h-[60vh] grid place-items-center">
                     <Loader2 className="w-5 h-5 animate-spin text-ink-faint" />
                 </div>
+            ) : customer && !customer.name ? (
+                /*
+                 * The last step of signing up, asked once.
+                 *
+                 * The six digits prove the number belongs to them; they do not
+                 * say what to call them. Somebody who has only ever booked on
+                 * WhatsApp already gave a name there and never sees this -
+                 * this is for the customer whose first door was the website,
+                 * who used to land on a page headed "Your jobs" with no name
+                 * anywhere and no way to give one.
+                 *
+                 * It also catches an older account that was created before
+                 * this existed, which is why the test is the name itself
+                 * rather than a flag set at sign-in.
+                 */
+                <NameStep onSaved={setCustomer} />
             ) : customer ? (
                 <SignedIn customer={customer} onSignOut={signOut} />
             ) : (
@@ -255,6 +272,89 @@ const SignIn = () => {
                     )}
                 </div>
             </div>
+            </div>
+        </section>
+    );
+};
+
+/* ================================================================== */
+/* THE NAME - the one thing the code cannot tell us                     */
+/* ================================================================== */
+
+/**
+ * Asked on its own, and asked for nothing else.
+ *
+ * Registering here is a number, the six digits that prove it, and what to call
+ * them. No address, no area, no language: this page cannot book anything, so
+ * collecting the things a booking needs would be an interview with no job at
+ * the end of it. WhatsApp asks for a location because a technician has to be
+ * sent somewhere; the website does not, and should not pretend it might.
+ *
+ * `PUT /api/customer/profile` already accepts a body with only a name - it
+ * skips the location work when there are no coordinates and stamps
+ * `nameConfirmedAt`, which is what marks the customer as known at every other
+ * door.
+ */
+const NameStep = ({ onSaved }) => {
+    const [name, setName] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState("");
+
+    const save = async () => {
+        const typed = name.trim();
+        if (typed.length < 2) return setError("Please enter your name.");
+
+        setBusy(true);
+        setError("");
+
+        try {
+            const res = await api.put("/customer/profile", { name: typed });
+            onSaved(res.data.data);
+        } catch (err) {
+            setError(getErrorMessage(err, "Could not save that. Try again."));
+            setBusy(false);
+        }
+    };
+
+    return (
+        <section className="relative overflow-clip">
+            <Blobs field="hero" />
+
+            <div className="relative mx-auto max-w-6xl px-5 sm:px-8 py-16 lg:py-24 grid place-items-center">
+                <div className="w-full max-w-md rounded-[28px] bg-surface p-7 sm:p-9 shadow-lift">
+                    <span className="w-11 h-11 grid place-items-center rounded-full bg-brand-tint text-brand-deep">
+                        <UserRound className="w-5 h-5" />
+                    </span>
+
+                    <h1 className="mt-5 font-display font-bold text-[26px] tracking-[-0.025em]">
+                        What should we call you?
+                    </h1>
+                    <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">
+                        Your number is verified. This is the last thing we need - the technician
+                        who comes out will ask for it at the door.
+                    </p>
+
+                    <input
+                        value={name}
+                        onChange={(e) => { setName(e.target.value); setError(""); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+                        placeholder="Your full name"
+                        autoFocus
+                        autoComplete="name"
+                        className="cg-input mt-6 h-12"
+                    />
+
+                    {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+
+                    <button
+                        onClick={save}
+                        disabled={busy || name.trim().length < 2}
+                        className="mt-5 w-full h-12 rounded-[10px] bg-brand hover:bg-brand-deep disabled:opacity-50 text-white font-semibold text-[15px] flex items-center justify-center gap-2 transition-colors"
+                    >
+                        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                        Finish
+                    </button>
+                </div>
             </div>
         </section>
     );
