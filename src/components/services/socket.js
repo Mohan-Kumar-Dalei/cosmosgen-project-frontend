@@ -4,7 +4,7 @@ const SOCKET_URL =
     import.meta.env.VITE_SOCKET_URL ||
     (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
         ? "http://localhost:3000"
-        : "https://cosmosgen-backend.onrender.com");
+        : "https://cosmosgen-api.duckdns.org");
 
 /**
  * Each panel builds its own socket and tells the server which role it's
