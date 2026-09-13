@@ -98,7 +98,7 @@ const RefusalPanel = ({ ticket, onUpdate, onError }) => {
                             </div>
                             <p className="mt-1 text-xs text-brand">
                                 You travelled out and quoted. This is yours — the office takes no
-                                commission on it.
+                                share of it.
                             </p>
                         </div>
 

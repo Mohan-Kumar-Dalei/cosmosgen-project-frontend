@@ -6,7 +6,7 @@ import { adminSocket, connectAdminSocket, disconnectAdminSocket, onLiveResume } 
 import { notifyNew, notifyAlert, notifyInfo } from "../../services/notify";
 import NotifyBadge from "../../ui/NotifyBadge";
 import {
-    LayoutDashboard, Ticket, Users, Wallet, Package,
+    LayoutDashboard, Ticket, Users, Wallet, Package, SlidersHorizontal,
     UserCog, TrendingUp, LogOut, Menu, X,
 } from "lucide-react";
 
@@ -223,9 +223,14 @@ const AdminLayout = ({ children }) => {
             badge: (counts.paymentsToVerify || 0) + (counts.paymentsOnline || 0) + (counts.wallets || 0),
         },
         { to: `${basePath}/services`, label: "Pricing", icon: Package, permission: "MANAGE_PRICING" },
+        // The owner's own controls, gathered: what the company sells, what it
+        // charges, and the rules around both. Owner only - a change in here
+        // reaches the website, the WhatsApp menu and the assistant at once.
+        { to: `${basePath}/controllers`, label: "Controllers", icon: SlidersHorizontal, permission: null, ownerOnly: true },
         { to: `${basePath}/staff`, label: "Team", icon: UserCog, permission: "MANAGE_STAFF" },
         { to: `${basePath}/analytics`, label: "Analytics", icon: TrendingUp, permission: "VIEW_ANALYTICS" },
-    ].filter((item) => !item.permission || hasPermission(item.permission));
+    ].filter((item) => (!item.permission || hasPermission(item.permission))
+        && (!item.ownerOnly || admin?.role === "superadmin"));
 
     const totalAlerts = navItems.reduce((sum, item) => sum + (item.badge || 0), 0);
 

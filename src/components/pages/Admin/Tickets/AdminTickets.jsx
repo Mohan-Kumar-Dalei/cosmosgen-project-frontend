@@ -1035,13 +1035,33 @@ const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
                                                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                                                     {tech.rating?.toFixed(1) || "5.0"}
                                                 </span>
-                                                {/* Distance is missing whenever the area search
-                                                    turned up someone who has never shared a
-                                                    position - saying so beats printing "0 km". */}
-                                                <span className="flex items-center gap-0.5">
+                                                {/* Road distance for the nearest few, straight
+                                                    line for the rest, and neither whenever the
+                                                    area search turned up somebody who has never
+                                                    shared a position - saying so beats printing
+                                                    "0 km". The road figure is the one to
+                                                    dispatch on, so it is the one shown when it
+                                                    is there, with the drive time beside it. */}
+                                                <span
+                                                    className={"flex items-center gap-0.5 " + (tech.roadKm != null ? "text-ink font-medium" : "")}
+                                                    title={tech.roadKm != null
+                                                        ? "By road. Straight line is " + tech.distanceKm + " km."
+                                                        : "Straight line"}
+                                                >
                                                     <Navigation className="w-3 h-3" />
-                                                    {tech.distanceKm != null ? tech.distanceKm + " km" : tech.area || "no location"}
+                                                    {tech.roadKm != null
+                                                        ? tech.roadKm + " km by road"
+                                                        : tech.distanceKm != null
+                                                            ? tech.distanceKm + " km"
+                                                            : tech.area || "no location"}
                                                 </span>
+
+                                                {tech.roadSeconds != null && (
+                                                    <span className="flex items-center gap-0.5 text-ink font-medium">
+                                                        <Clock className="w-3 h-3" />
+                                                        {Math.max(1, Math.round(tech.roadSeconds / 60))} min away
+                                                    </span>
+                                                )}
                                                 {/* How old that distance is. A technician who
                                                     last opened the panel days ago is not really
                                                     "0.02 km away" any more. */}

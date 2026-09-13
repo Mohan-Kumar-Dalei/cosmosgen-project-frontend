@@ -1209,11 +1209,47 @@ const WalletTab = ({ pendingCash, refreshTrigger }) => {
                             <p className="font-semibold text-ink">No transactions yet</p>
                         </div>
                     ) : (
-                        data.transactions.map((t) => (
+                        data.transactions.map((t) => {
+                            /* The technician's direction, worked out by the
+                               server - not the stored credit or debit, which is
+                               the company's bookkeeping and reads backwards
+                               here. Settling a due is a credit, so money he had
+                               handed over used to appear in green with a plus
+                               in front of it; a payout is a debit, so money
+                               that had reached his bank appeared in red.
+
+                               Orange rather than red for anything going out:
+                               none of it is an error, it is the office's money
+                               he is holding until he hands it in. */
+                            const incoming = t.flow === "in";
+
+                            return (
                             <div key={t._id} className="cg-card p-3.5 lg:p-4">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                        <p className="text-sm lg:text-base text-ink leading-snug">{t.description}</p>
+                                        <p className="text-sm lg:text-base text-ink leading-snug">
+                                            {t.title || t.description}
+                                        </p>
+
+                                        {/* The whole job, under the part that moved.
+
+                                            A cash job writes only the office's part to
+                                            the ledger, because the bill went straight
+                                            from the customer into the technician's
+                                            pocket. Left at that, a Rs 899 job he was
+                                            paid in full for reads as "- Rs 269.70" and
+                                            nothing else, which looks like money being
+                                            taken off him. */}
+                                        {t.job && (
+                                            <p className="text-[11px] lg:text-xs font-semibold text-ink-soft mt-1">
+                                                Bill Rs {t.job.billDisplay}
+                                                {" · "}
+                                                <span className="text-brand">
+                                                    Your earning Rs {t.job.keptDisplay}
+                                                </span>
+                                            </p>
+                                        )}
+
                                         <p className="text-[11px] lg:text-xs text-ink-faint mt-1">
                                             {new Date(t.createdAt).toLocaleDateString("en-IN", {
                                                 day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
@@ -1222,22 +1258,23 @@ const WalletTab = ({ pendingCash, refreshTrigger }) => {
                                         </p>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <p className={"text-sm lg:text-base font-bold " + (t.type === "credit" ? "text-brand" : "text-danger")}>
-                                            {t.type === "credit" ? "+" : "-"} Rs {t.amountDisplay}
+                                        <p className={"text-sm lg:text-base font-bold " + (incoming ? "text-brand" : "text-warn")}>
+                                            {incoming ? "+" : "-"} Rs {t.amountDisplay}
                                         </p>
-                                        {t.movesBalance === false ? (
-                                            <p className="text-[10px] lg:text-xs text-ink-faint">
-                                                Fully settled
-                                            </p>
-                                        ) : (
-                                            <p className="text-[10px] lg:text-xs text-ink-faint">
-                                                Bal: Rs {t.balanceAfterDisplay}
-                                            </p>
+
+                                        {/* The running balance used to sit here. It is
+                                            an accountant's column: unsigned, it could
+                                            not say whether the number was owed or
+                                            owing, and the cards at the top of this tab
+                                            already answer that. */}
+                                        {t.note && (
+                                            <p className="text-[10px] lg:text-xs text-ink-faint">{t.note}</p>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             )}

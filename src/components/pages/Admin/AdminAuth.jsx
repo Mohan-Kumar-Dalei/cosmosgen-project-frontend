@@ -28,7 +28,11 @@ export const AdminAuthProvider = ({ children }) => {
     // a 401 in their console for nothing.
     useEffect(() => {
         const path = window.location.pathname;
-        const isAdminRoute = path.startsWith("/admin") || path.startsWith("/owner");
+        // The developer platform signs in with the same owner account, so
+        // its pages need the session restored the same way
+        const isAdminRoute = path.startsWith("/admin")
+            || path.startsWith("/owner")
+            || path.startsWith("/developer");
 
         if (!isAdminRoute) {
             setLoading(false);

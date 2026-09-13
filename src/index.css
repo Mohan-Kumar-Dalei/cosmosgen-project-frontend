@@ -739,3 +739,914 @@ label[for] {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
     animation: shimmer 1.6s infinite;
 }
+
+/* ---------------------------------------------------------------
+   The customer pages' gradient field.
+
+   Three soft orbs of the brand's colours drifting behind the paper.
+   Kept here rather than inline because a keyframe cannot be written
+   in a style attribute, and because the reduced-motion rule below
+   has to be able to reach every one of them at once.
+   --------------------------------------------------------------- */
+
+.cg-blob {
+    position: absolute;
+    border-radius: 50%;
+    /* The orbs are positioned by their centres, which is how you think
+       about them, rather than by a corner */
+    translate: -50% -50%;
+    will-change: transform;
+}
+
+@keyframes cg-drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(5%, -7%, 0) scale(1.14); }
+}
+
+@keyframes cg-drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1.08); }
+    to   { transform: translate3d(-6%, 5%, 0) scale(0.94); }
+}
+
+.cg-drift-a { animation: cg-drift-a ease-in-out infinite alternate; }
+.cg-drift-b { animation: cg-drift-b ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-blob { animation: none !important; }
+}
+
+/* ---------------------------------------------------------------
+   The customer site in the dark.
+
+   Scoped to a class rather than to :root, because the staff panels
+   were designed against the light palette and nobody in the office
+   asked for their tools to change colour. Every utility in this app
+   already reads its colour from one of these variables, so
+   redefining them on one wrapper turns that whole subtree over.
+
+   Not an inversion. The ground is a very dark slate carrying a hint
+   of the logo's blue, the ink stops well short of white, and the
+   two brand colours are lifted - #0f78d0 on near-black is a smear,
+   and #17a03c is worse.
+   --------------------------------------------------------------- */
+
+.cg-dark {
+    color-scheme: dark;
+
+    --color-canvas: #0e1317;
+    --color-surface: #161d23;
+    --color-sunken: #1d262e;
+    --color-hairline: #26313a;
+    --color-hairline-strong: #37444f;
+
+    --color-ink: #eef1f4;
+    --color-ink-soft: #a4afb9;
+    --color-ink-faint: #74818d;
+
+    --color-accent: #55a9ea;
+    /* Hover goes lighter here, not darker - on a dark ground "deeper"
+       means receding, which is the opposite of what a hover should do */
+    --color-accent-deep: #82c3f6;
+    --color-accent-tint: #13293b;
+
+    --color-brand: #34c46c;
+    --color-brand-deep: #62d68f;
+    --color-brand-tint: #11291b;
+
+    /* The panel has to stay darker than the canvas, or the bands that
+       use it stop reading as a separate surface at all */
+    --color-panel: #070b0e;
+    --color-panel-soft: #111a22;
+    --color-panel-line: rgba(255, 255, 255, 0.08);
+
+    --color-warn: #e2a244;
+    --color-warn-tint: #2c2212;
+    --color-danger: #e06a63;
+    --color-danger-tint: #2e1917;
+    --color-info: #5aa7e0;
+    --color-info-tint: #14232f;
+
+    /* Depth on a dark ground comes from a lighter edge, never from a
+       darker shadow - a black shadow on near-black is invisible */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --shadow-lift: 0 18px 44px -16px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+    --pattern-ink: rgba(255, 255, 255, 0.055);
+}
+
+:root {
+    /* What the patterns are drawn in. A hair of the logo's blue on
+       paper, plain light on the dark ground. */
+    --pattern-ink: rgba(15, 120, 208, 0.05);
+}
+
+/* ---------------------------------------------------------------
+   Patterns. Drawn, never downloaded - a gradient cannot 404, cannot
+   change licence and cannot be slow, which is more than can be said
+   for any image on the internet.
+   --------------------------------------------------------------- */
+
+.cg-dots {
+    background-image: radial-gradient(var(--pattern-ink) 1.1px, transparent 1.1px);
+    background-size: 22px 22px;
+}
+
+.cg-grid {
+    background-image:
+        linear-gradient(var(--pattern-ink) 1px, transparent 1px),
+        linear-gradient(90deg, var(--pattern-ink) 1px, transparent 1px);
+    background-size: 64px 64px;
+}
+
+
+/* Every pattern fades out downward, so a band ends softly instead of
+   stopping at a ruled line where the tiling runs out */
+.cg-fade-b {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
+}
+
+.cg-fade-radial {
+    -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 30%, #000 35%, transparent 100%);
+    mask-image: radial-gradient(ellipse 75% 70% at 50% 30%, #000 35%, transparent 100%);
+}
+
+/* ---------------------------------------------------------------
+   The panels the drawings stand on.
+
+   The customer illustrations are cutouts with nothing behind them,
+   so every one needs a ground - and that ground has to change with
+   the theme or a page in the dark ends up carrying four pale
+   rectangles. Three tints rotate so a row of them does not read as
+   one long tile.
+   --------------------------------------------------------------- */
+
+:root {
+    --art-sky: linear-gradient(158deg, #e4eff9, #f4f3ee 78%);
+    --art-leaf: linear-gradient(158deg, #e6f4ea, #f4f3ee 78%);
+    --art-sand: linear-gradient(158deg, #f4eee2, #f4f3ee 78%);
+    --art-dark: linear-gradient(158deg, #17293a, #0d1a26 70%);
+    --art-edge: inset 0 0 0 1px rgba(26, 26, 23, 0.05);
+}
+
+.cg-dark {
+    --art-sky: linear-gradient(158deg, #16283a, #141b21 78%);
+    --art-leaf: linear-gradient(158deg, #163024, #141b21 78%);
+    --art-sand: linear-gradient(158deg, #2c2519, #141b21 78%);
+    --art-dark: linear-gradient(158deg, #0d151c, #070b0e 70%);
+    --art-edge: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* ---------------------------------------------------------------
+   The grounds under the five steps of the deck.
+
+   These were five hand-written pale gradients inside the component,
+   which is fine until the page goes dark: the panel stayed the
+   colour of paper while the text on it turned near-white, and the
+   whole deck read as smoke. Tokens instead, so each step keeps its
+   own colour in both themes and the deck stays five distinguishable
+   cards rather than five grey ones.
+   --------------------------------------------------------------- */
+
+:root {
+    --step-1: linear-gradient(135deg, #e7f1fb 0%, #f7f6f1 62%);
+    --step-2: linear-gradient(135deg, #e7f4ea 0%, #f7f6f1 62%);
+    --step-3: linear-gradient(135deg, #f5eee2 0%, #f7f6f1 62%);
+    --step-4: linear-gradient(135deg, #e9eef6 0%, #f7f6f1 62%);
+    --step-5: linear-gradient(135deg, #e6f3ec 0%, #f7f6f1 62%);
+    /* The chip that carries the step number, which sits on top of
+       whichever ground is behind it */
+    --step-chip: rgba(255, 255, 255, 0.7);
+    --step-figure: rgba(26, 26, 23, 0.05);
+}
+
+.cg-dark {
+    --step-1: linear-gradient(135deg, #16293c 0%, #121820 62%);
+    --step-2: linear-gradient(135deg, #153025 0%, #121820 62%);
+    --step-3: linear-gradient(135deg, #2b2519 0%, #121820 62%);
+    --step-4: linear-gradient(135deg, #1a2333 0%, #121820 62%);
+    --step-5: linear-gradient(135deg, #14302a 0%, #121820 62%);
+    --step-chip: rgba(255, 255, 255, 0.09);
+    --step-figure: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------------------------------------------------------------
+   A page arriving.
+
+   Two compositor properties and a third of a second, on a keyframe
+   rather than a tween: this runs on every navigation, and a CSS
+   animation costs no script, cannot be left half-finished by a
+   throttled tab, and is skipped outright by a reader who has asked
+   for less movement.
+   --------------------------------------------------------------- */
+
+.cg-page-in {
+    animation: cg-page-in 0.34s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes cg-page-in {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 10px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-page-in { animation: none; }
+}
+
+/* ---------------------------------------------------------------
+   The assistant, waiting and then answering.
+
+   A light travels through the word while the model reads. It is a
+   background clipped to the text rather than a row of dots,
+   because nobody is typing - something is being read, and the two
+   look different when you have watched both.
+
+   The answer then arrives out of a blur. Blurring is the one
+   effect that reads as "this was being worked out" rather than
+   "this slid in", and it costs a single compositor property. Note
+   the end state: fully sharp and fully opaque, and the animation
+   is `both`, so even if the frame never advances the text is
+   legible - the start state is a blur, never nothing at all.
+   --------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------
+   A picture that has not arrived yet.
+
+   The drawings on this site are large PNGs on a transparent
+   ground, and on a phone they take a moment. Until now the ones
+   with no panel behind them had nothing at all in their place: a
+   hole in the layout, then a picture. The hole is the part that
+   reads as broken - a reader cannot tell "loading" from "missing".
+
+   So the space says it is busy. Deliberately faint and unbordered:
+   a solid card here would read as the sticker that `bare` exists to
+   avoid, and it is only on screen for a moment. It fades as the
+   picture fades in, so the two cross rather than one replacing the
+   other with a blink.
+   --------------------------------------------------------------- */
+
+.cg-skeleton {
+    background-color: color-mix(in srgb, var(--color-ink) 6%, transparent);
+    background-image: linear-gradient(
+        100deg,
+        transparent 22%,
+        color-mix(in srgb, var(--color-ink) 5%, transparent) 44%,
+        transparent 66%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: cg-skeleton 1.5s linear infinite;
+}
+
+@keyframes cg-skeleton {
+    from { background-position: 180% 0; }
+    to   { background-position: -40% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-skeleton { animation: none; }
+}
+
+/* A phone has better things to do with its frames than sweep a
+   gradient across a box - the shape alone says the same thing */
+@media (pointer: coarse), (max-width: 1023px) {
+    .cg-skeleton { animation: none; }
+}
+
+.cg-shimmer {
+    background: linear-gradient(
+        100deg,
+        var(--color-ink-faint) 20%,
+        var(--color-ink) 42%,
+        var(--color-ink-faint) 64%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: cg-shimmer 1.6s linear infinite;
+}
+
+@keyframes cg-shimmer {
+    from { background-position: 180% 0; }
+    to { background-position: -80% 0; }
+}
+
+.cg-answer-in {
+    animation: cg-answer-in 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes cg-answer-in {
+    from {
+        opacity: 0.35;
+        filter: blur(7px);
+        transform: translate3d(0, 6px, 0);
+    }
+    to {
+        opacity: 1;
+        filter: blur(0);
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-shimmer {
+        animation: none;
+        background: none;
+        color: var(--color-ink-soft);
+    }
+    .cg-answer-in { animation: none; }
+}
+
+/* ---------------------------------------------------------------
+   The weave.
+
+   A third texture, for the bands that carry a conversation - the
+   assistant's own page and the strip that invites somebody into
+   it. Dots read as paper and the cross-hatch as a plan; this is
+   two sets of hairlines at opposing angles, which reads as cloth
+   and gives those sections a ground of their own without another
+   colour.
+   --------------------------------------------------------------- */
+
+.cg-weave {
+    /* currentColor, not a fixed hairline: this texture has to work on the
+       page's own paper and on the navy band underneath the questions, and a
+       colour that already inherits the band's ink does both without a
+       second class */
+    background-image:
+        repeating-linear-gradient(
+            38deg,
+            currentColor 0 1px,
+            transparent 1px 15px
+        ),
+        repeating-linear-gradient(
+            -38deg,
+            currentColor 0 1px,
+            transparent 1px 15px
+        );
+    opacity: 0.07;
+}
+
+/* ---------------------------------------------------------------
+   The tracking illustration on the customer home page.
+
+   The blue trace and the travelling marker follow the same curve,
+   because the marker is placed on that curve as a motion path
+   rather than positioned by hand. Change the road in the SVG and
+   the path below is the one other place to change - keeping them in
+   one file is what stops the engineer from driving through a field.
+   --------------------------------------------------------------- */
+
+.cg-route {
+    stroke-dasharray: 460;
+    stroke-dashoffset: 460;
+    animation: cg-trace 7s ease-in-out infinite;
+}
+
+@keyframes cg-trace {
+    0%        { stroke-dashoffset: 460; }
+    55%, 100% { stroke-dashoffset: 0; }
+}
+
+.cg-runner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    offset-path: path("M28 158 C 96 158, 92 82, 154 78 C 218 74, 228 132, 288 120 C 312 116, 322 96, 328 72");
+    offset-rotate: 0deg;
+    offset-distance: 0%;
+    /* The SVG is drawn in a 380x168 box and stretched to the panel, so the
+       marker is nudged onto the same footing rather than left at the origin */
+    margin: -14px 0 0 -14px;
+    animation: cg-travel 7s ease-in-out infinite;
+}
+
+@keyframes cg-travel {
+    0%        { offset-distance: 0%; opacity: 0; }
+    6%        { opacity: 1; }
+    55%, 100% { offset-distance: 100%; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-route { animation: none; stroke-dashoffset: 0; }
+    .cg-runner { animation: none; offset-distance: 62%; }
+}
+
+/* ---------------------------------------------------------------
+   The customer site's own identity.
+
+   Everything below hangs off one class on the customer shell, which
+   is what lets the public site have a face of its own without
+   touching the panels the office works in all day. Two things
+   change: the display face, and the contrast.
+
+   Outfit is a good working typeface and a completely anonymous one
+   - it is what a page reaches for when nobody has decided anything.
+   Bricolage Grotesque has an actual voice at large sizes, which is
+   the only place this site uses a display face at all.
+
+   The ink also goes darker and cooler. The warm near-black was easy
+   on a warm paper and read as washed out the moment anything bold
+   sat next to it.
+   --------------------------------------------------------------- */
+
+.cg-site {
+    --font-display: "Bricolage Grotesque", "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+    --color-canvas: #f8f8f6;
+    --color-surface: #ffffff;
+    --color-sunken: #f1f1ed;
+    --color-hairline: #e6e6e0;
+    --color-hairline-strong: #d3d3cb;
+
+    --color-ink: #0f1218;
+    --color-ink-soft: #525861;
+    --color-ink-faint: #8a9099;
+
+    --color-accent: #0b62cf;
+    --color-accent-deep: #0a4fa8;
+    --color-accent-tint: #e8f1fd;
+
+    /* A field is a whole band of colour rather than a button's worth.
+       The site had none, and a page with no large colour anywhere on it
+       is the thing that reads as timid however well it is set. */
+    --color-field: #0b57bd;
+    --color-field-soft: #2a79dd;
+    --color-field-ink: #ffffff;
+
+    /* The ground the page is lifted off.
+
+       Exactly the panel colour, because that is what most pages end on -
+       the dark band above the footer. Matching them means the last band
+       rounds into the footer with no step, no seam and nothing for a pale
+       edge to appear along. What still says "this is lifted" is the curve
+       on that band and the shadow it casts, which is the honest way to say
+       it: an edge and its shadow, not a change of colour. */
+    --color-footer: var(--color-panel);
+    --color-footer-line: rgba(255, 255, 255, 0.1);
+}
+
+.cg-site.cg-dark {
+    --color-canvas: #0d1116;
+    --color-surface: #151b22;
+    --color-sunken: #1b232b;
+    --color-hairline: #252f39;
+    --color-hairline-strong: #37434f;
+
+    --color-ink: #f1f3f6;
+    --color-ink-soft: #a7b1bc;
+    --color-ink-faint: #76828e;
+
+    --color-accent: #5cabf0;
+    --color-accent-deep: #8ac6f8;
+    --color-accent-tint: #122639;
+
+    --color-field: #0b3f83;
+    --color-field-soft: #1b5aa8;
+    --color-field-ink: #ffffff;
+
+    --color-footer: var(--color-panel);
+    --color-footer-line: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------------------------------------------------------------
+   A line of display type arriving from behind its own edge.
+
+   A fade says the words were always there and someone turned them
+   up. A mask says they were printed. Each line needs its own
+   overflow box, which is what the wrapper span is for.
+   --------------------------------------------------------------- */
+
+.cg-mask {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-route, .cg-runner { animation: none; }
+}
+
+/* The merged shapes drift, slowly and only against each other, so the form
+   they make together keeps changing without anything visibly moving. */
+@keyframes cg-mesh-a {
+    from { transform: translate(0, 0); }
+    to   { transform: translate(-70px, 46px); }
+}
+
+@keyframes cg-mesh-b {
+    from { transform: translate(0, 0); }
+    to   { transform: translate(56px, -60px); }
+}
+
+.cg-mesh-a { animation: cg-mesh-a 26s ease-in-out infinite alternate; }
+.cg-mesh-b { animation: cg-mesh-b 31s ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-mesh-a, .cg-mesh-b { animation: none; }
+}
+
+/* ---------------------------------------------------------------
+   And never on a phone, whatever it says about motion.
+
+   These four circles live inside an SVG gaussian blur. A filter's
+   output is cached until something inside it moves - and something
+   inside it was moving for twenty-six seconds at a stretch, on a
+   loop, which meant the browser re-ran a blur over the whole filter
+   region on every frame the page was open. Desktops absorb that.
+   A mid-range Android does not: it saturates the main thread, and
+   the symptom is not a stuttery background, it is taps landing
+   seconds late and scrolling that feels stuck.
+
+   Held still the mesh looks the same in a screenshot and costs one
+   rasterisation for the life of the page.
+   --------------------------------------------------------------- */
+
+@media (pointer: coarse), (max-width: 1023px) {
+    .cg-mesh-a, .cg-mesh-b { animation: none; }
+}
+
+/* ---------------------------------------------------------------
+   Frosted glass, on the machines that can afford it.
+
+   A backdrop filter is not a paint, it is a read of everything
+   behind the element followed by a blur of that read - and on a bar
+   pinned over a scrolling page it happens every frame the page
+   moves. It was the second most expensive thing on these pages
+   after the mesh above, spent on an effect a phone shows about four
+   pixels of.
+
+   Written as an addition rather than as a "none" on small screens
+   on purpose: a declaration of `backdrop-filter: none` is the
+   property's own initial value, and the minifier quite reasonably
+   throws it away - which is exactly what happened to the first
+   attempt at this, and the blur stayed. Nothing to throw away here;
+   on a phone the property is simply never set.
+
+   The bar's own background is a translucent one, so without the
+   blur behind it the page would read through. It takes the paper
+   colour flat instead, which at that size is what the frosting
+   looked like anyway.
+   --------------------------------------------------------------- */
+
+.cg-bar-glass {
+    background: var(--color-canvas);
+}
+
+@media (pointer: fine) and (min-width: 1024px) {
+    .cg-bar-glass {
+        background: color-mix(in srgb, var(--color-canvas) 80%, transparent);
+        /* Unprefixed only. Written with the -webkit- twin beside it, the
+           build collapsed the pair down to the prefixed one alone and the
+           blur vanished on every browser that only knows the standard
+           property - which is most of them now. The build adds prefixes
+           where its targets need them. */
+        backdrop-filter: blur(24px);
+    }
+}
+
+
+
+/* ---------------------------------------------------------------
+   The cross field, which replaced the diagonal hatch.
+
+   A grid drawn and then masked down to the crossing points, so what
+   is left is a regular field of small plus marks - the way a
+   drawing board or a survey sheet is marked. It reads as measured
+   rather than scratched, which is the whole reason the hatch had to
+   go.
+   --------------------------------------------------------------- */
+
+.cg-cross {
+    background-image:
+        linear-gradient(var(--pattern-ink) 1.2px, transparent 1.2px),
+        linear-gradient(90deg, var(--pattern-ink) 1.2px, transparent 1.2px);
+    background-size: 38px 38px;
+    background-position: center;
+    /* Only the intersections survive */
+    -webkit-mask-image: radial-gradient(circle 3.5px at 19px 19px, #000 98%, transparent 100%);
+    mask-image: radial-gradient(circle 3.5px at 19px 19px, #000 98%, transparent 100%);
+    -webkit-mask-size: 38px 38px;
+    mask-size: 38px 38px;
+    -webkit-mask-position: center;
+    mask-position: center;
+}
+
+/* A live position always has a ring easing out of it. */
+@keyframes cg-ping {
+    0%        { transform: scale(1); opacity: 0.55; }
+    70%, 100% { transform: scale(2.6); opacity: 0; }
+}
+
+.cg-ping { animation: cg-ping 2.4s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-ping { animation: none; opacity: 0; }
+}
+
+/* ---------------------------------------------------------------
+   The shelf's own rail.
+
+   Swiper paints a progress bar as a child it positions absolutely,
+   and its default is a four-pixel grey bar pinned to the top of
+   the slider. Here it is a hairline under the shelf with the
+   accent travelling along it, which is the one piece of chrome
+   that tells a reader the shelf has an end.
+   --------------------------------------------------------------- */
+
+.cg-shelf-rail .swiper-pagination-progressbar-fill {
+    background: var(--color-accent);
+    border-radius: 999px;
+}
+
+/* Every second card on the shelf hangs lower, which is what stops five
+   tiles in a row from reading as a default carousel. A transform rather
+   than a margin: Swiper owns each slide's inline style and rewrites it. */
+
+.cg-shelf-run .swiper-slide:nth-child(even) > * {
+    transform: translateY(34px);
+}
+
+@media (max-width: 640px) {
+    .cg-shelf-run .swiper-slide:nth-child(even) > * {
+        transform: translateY(18px);
+    }
+}
+
+/* ---------------------------------------------------------------
+   Something to stand on.
+
+   The drawings are cutouts with no ground of their own, and once
+   the tinted panels came off they read as floating. A soft ellipse
+   under the feet is all it takes - the oldest trick there is, and
+   still the one that makes a figure look like it is standing in
+   the room rather than pasted onto it. Drawn, not fetched, so it
+   costs nothing and follows the theme.
+   --------------------------------------------------------------- */
+
+/* Inside a layer on purpose.
+   Unlayered CSS outranks everything in a cascade layer no matter how weak its
+   selector is, so a bare `.cg-stand { position: relative }` at the end of this
+   sheet beat Tailwind's own `lg:absolute` and quietly pulled the home page's
+   hero figure out of its absolute position and back into the flow. In the
+   components layer it behaves the way a base style should: it applies where
+   nothing else has an opinion, and any utility on the element wins. */
+@layer components {
+    .cg-stand {
+        position: relative;
+    }
+}
+
+.cg-stand::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 1.5%;
+    width: 62%;
+    height: 5.5%;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(
+        closest-side,
+        color-mix(in srgb, var(--color-ink) 26%, transparent),
+        transparent 100%
+    );
+    pointer-events: none;
+}
+
+/* A little firmer in the dark, where a faint shade disappears
+   into the ground it is supposed to sit on */
+.cg-dark .cg-stand::after {
+    background: radial-gradient(
+        closest-side,
+        rgba(0, 0, 0, 0.55),
+        transparent 100%
+    );
+}
+
+/* ---------------------------------------------------------------
+   The assistant's answer, a character at a time.
+
+   Every letter is its own span with its own delay, so the reply
+   resolves the way a thought does rather than arriving as one
+   blurred block. The step shrinks as an answer gets longer - the
+   whole reveal is capped at about a second, because a reader who
+   has waited for a model does not want to wait for an animation
+   as well.
+
+   `both` fill and a visible end state: if the animation never runs
+   at all, every character sits at its final, perfectly legible
+   position.
+   --------------------------------------------------------------- */
+
+.cg-char {
+    display: inline-block;
+    white-space: pre-wrap;
+    animation: cg-char-in 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    animation-delay: var(--d, 0ms);
+}
+
+@keyframes cg-char-in {
+    from {
+        opacity: 0;
+        filter: blur(6px);
+        transform: translate3d(0, 3px, 0);
+    }
+    to {
+        opacity: 1;
+        filter: blur(0);
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-char { animation: none; }
+}
+
+
+/* ---------------------------------------------------------------
+   The little job, playing.
+
+   Five moments from a real booking, each one rebuilt when it
+   becomes current, so everything inside it can arrive on a plain
+   CSS delay - `--d` on the element, nothing to schedule and
+   nothing to tear down.
+
+   Two versions of this were diagrams before it: five chips, then
+   five nodes on a wire. Both described the process and neither
+   showed it, which is the difference this is trying to close.
+   --------------------------------------------------------------- */
+
+/* The filled part of the rail, with a light running along its head so the
+   bar reads as a job in motion rather than a bar that has simply been set
+   to a width */
+.cg-rail {
+    position: relative;
+    overflow: hidden;
+}
+
+.cg-rail::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, #fff 80%, transparent) 50%,
+        transparent 100%
+    );
+    animation: cg-rail-light 2.4s ease-in-out infinite;
+}
+
+@keyframes cg-rail-light {
+    0% { transform: translateX(-100%); }
+    55%, 100% { transform: translateX(100%); }
+}
+
+.cg-stage {
+    animation: cg-stage-in 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes cg-stage-in {
+    from { opacity: 0; transform: translate3d(0, 8px, 0); }
+    to { opacity: 1; transform: none; }
+}
+
+/* Anything inside a stage arrives on its own beat */
+.cg-pop {
+    animation: cg-pop-in 0.38s cubic-bezier(0.2, 0.8, 0.3, 1.1) both;
+    animation-delay: var(--d, 0s);
+}
+
+@keyframes cg-pop-in {
+    from { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.97); }
+    to { opacity: 1; transform: none; }
+}
+
+/* The assistant thinking, and then getting out of the way */
+.cg-typing {
+    animation: cg-typing-out 0.3s ease-in both;
+    animation-delay: 1.35s;
+}
+
+@keyframes cg-typing-out {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: scale(0.9); }
+}
+
+.cg-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--color-ink-faint);
+    animation: cg-dot-bounce 1s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
+}
+
+@keyframes cg-dot-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+    30% { transform: translateY(-3px); opacity: 1; }
+}
+
+/* The tick at the end lands rather than appears */
+.cg-tick {
+    animation: cg-tick-land 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+
+@keyframes cg-tick-land {
+    from { transform: scale(0.3); }
+    to { transform: scale(1); }
+}
+
+/* The segment for the stage that is running fills while it runs */
+.cg-fill {
+    animation: cg-fill 3.2s linear both;
+}
+
+@keyframes cg-fill {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-stage, .cg-pop, .cg-typing, .cg-dot, .cg-tick, .cg-rail::after {
+        animation: none;
+    }
+
+    .cg-rail::after { display: none; }
+}
+
+/* ---------------------------------------------------------------
+   A pattern that arrives from one corner.
+
+   Covering a whole band in texture flattens it - the eye reads
+   wallpaper and stops looking. Anchored in a corner and faded out
+   across the diagonal, the same hairlines become a shape the
+   section is sitting in, and the gradient underneath gives the
+   corner something to dissolve into.
+   --------------------------------------------------------------- */
+
+.cg-corner {
+    -webkit-mask-image: radial-gradient(88% 88% at 100% 0%, #000 0%, #000 26%, transparent 72%);
+    mask-image: radial-gradient(88% 88% at 100% 0%, #000 0%, #000 26%, transparent 72%);
+}
+
+.cg-corner-wash {
+    background:
+        radial-gradient(70% 70% at 100% 0%, color-mix(in srgb, var(--color-accent) 16%, transparent) 0%, transparent 68%),
+        radial-gradient(60% 60% at 0% 100%, color-mix(in srgb, var(--color-brand) 12%, transparent) 0%, transparent 66%);
+}
+
+/* ---------------------------------------------------------------
+   The band that ends the page.
+
+   Marked by the shell, because which one it is depends on how the
+   page was built. Rounding it - rather than rounding the page and
+   clipping the band to that - is what removes the pale hairline
+   that used to trace the corner: there is nothing behind the band
+   at its own edge, so nothing can bleed through it.
+
+   The shadow goes here too, so the lift is cast by the shape that
+   actually has the curve.
+   --------------------------------------------------------------- */
+
+.cg-sheet-end {
+    border-bottom-left-radius: 34px;
+    border-bottom-right-radius: 34px;
+    box-shadow: 0 34px 60px -24px rgba(0, 0, 0, 0.5);
+
+    /* This now goes on the wrapper the bands sit in rather than on the
+       last band itself, so the curve has to trim whatever ends the page.
+       Clip and not hidden: clip trims without turning the element into a
+       scrollport, which would silently kill every sticky thing inside it. */
+    overflow: clip;
+}
+
+/* ---------------------------------------------------------------
+   The page's last inch, in the footer's colour.
+
+   The final band on a page is rounded at the bottom, and whatever
+   sits behind that curve shows through it. The page's own paper
+   showing there is what read as a white border tracing the arc.
+   A hard-stopped gradient paints only the last forty pixels, so
+   the curve opens onto the same colour the footer is, and every
+   inch above it - the hero included - is untouched.
+   --------------------------------------------------------------- */
+
+.cg-page-ground {
+    /* An image and not a shorthand, so the sheet keeps the paper colour it
+       was given and only gains this strip on top of it */
+    background-image: linear-gradient(
+        to top,
+        var(--color-footer) 40px,
+        transparent 40px
+    );
+}

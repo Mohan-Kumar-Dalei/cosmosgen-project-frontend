@@ -873,7 +873,7 @@ const TechnicianRegister = () => {
 
                             <div className="p-3.5 2xl:p-4 bg-info-tint border border-hairline rounded-xl mb-5 2xl:mb-8">
                                 <p className="text-xs 2xl:text-sm text-info">
-                                    Cash jobs stay with you and only the commission is charged.
+                                    On a cash job the money stays with you, and you hand the office's part in later.
                                     Online jobs are paid into this account.
                                 </p>
                             </div>

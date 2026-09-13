@@ -437,7 +437,17 @@ const EarningsStrip = ({ earnings }) => (
  * then the window had closed and the answer on screen was stale. One button,
  * pressed whenever anyone wants to know, is the honest version.
  */
-const GatewayCheck = ({ state, onRecheck }) => (
+/**
+ * What the gateway said, and - when it said yes - what is still not done.
+ *
+ * A confirmed check on a cash job is only half the work. The money reached the
+ * company, but nothing has been written into the ledger yet, so the vendor's
+ * due is still standing and the row is still in To verify. Reading "Razorpay
+ * confirmed Rs 269.70" with a green tick beside it, anybody would assume the
+ * job was finished and wonder why it had not moved. So the panel says the
+ * second half out loud and puts the button for it right there.
+ */
+const GatewayCheck = ({ state, onRecheck, onSettle }) => (
     <div className="border-t border-hairline bg-sunken px-4 py-3">
         {state.loading && !state.note && !state.error ? (
             <p className="text-xs text-ink-soft flex items-center gap-1.5">
@@ -489,6 +499,23 @@ const GatewayCheck = ({ state, onRecheck }) => (
                 <RefreshCw className={"w-3.5 h-3.5 " + (state.loading ? "animate-spin" : "")} />
                 {state.loading ? "Checking" : "Check again"}
             </button>
+        )}
+
+        {state.settled && onSettle && (
+            <div className="mt-2.5">
+                <p className="text-[11px] text-warn mb-1.5">
+                    The money is confirmed, but nothing is in the ledger yet — this job stays here,
+                    and the vendor still owes it, until the collection is recorded.
+                </p>
+                <button
+                    type="button"
+                    onClick={onSettle}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-ink hover:bg-black rounded-lg"
+                >
+                    <Landmark className="w-3.5 h-3.5" />
+                    Record the collection
+                </button>
+            </div>
         )}
     </div>
 );
@@ -654,7 +681,7 @@ const PaymentCard = ({ payment: p, canVerify, verifying, onVerify, onOpenBill, o
                 </div>
             </div>
 
-            {check && <GatewayCheck state={check} onRecheck={runCheck} />}
+            {check && <GatewayCheck state={check} onRecheck={runCheck} onSettle={onSettle} />}
 
             {s.commissionDisplay && s.commissionDisplay !== "0.00" && <SettlementBreakdown settlement={s} />}
         </div>

@@ -9,7 +9,7 @@ import RefusalPanel from "./RefusalPanel";
 import {
     Phone, MapPin, AlertTriangle, X, Loader2, Plus, Trash2,
     Receipt, CheckCircle2, RefreshCw, Copy, Minus, Banknote, Smartphone,
-    Briefcase, Split, Pencil, ThumbsDown,
+    Briefcase, Split, Pencil, ThumbsDown, ArrowLeft, ArrowRight, Search,
 } from "lucide-react";
 
 const rupees = (paise) => (Number(paise || 0) / 100).toFixed(2);
@@ -489,6 +489,8 @@ const ReleaseModal = ({ ticket, onClose, onDone, onError }) => {
 
 /* ================= INVOICE ================= */
 
+const BILL_STEPS = ["The job", "Charges", "Payment"];
+
 const CATEGORY_ORDER = ["labour", "service", "part"];
 const CATEGORY_LABELS = { labour: "Service charge", service: "Add-on services", part: "Parts" };
 
@@ -521,6 +523,30 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
     const [formError, setFormError] = useState("");
     const [showCustom, setShowCustom] = useState(false);
     const [activeAppliance, setActiveAppliance] = useState("");
+
+    /*
+     * Three steps rather than one long dialog.
+     *
+     * It read well while the price list was short. It will not: every
+     * appliance the office adds and every add-on service puts another row
+     * between the technician and the button, and a form you have to scroll
+     * twice to check is a form that gets filled in wrong. Each step asks one
+     * thing - what the job was, what to charge, how they are paying - and the
+     * total stays in the footer so the number being decided is never off
+     * screen.
+     */
+    const [step, setStep] = useState(0);
+
+    /*
+     * A box to find an item by name.
+     *
+     * The price list is short today and will not stay short - every appliance
+     * the office adds brings its own parts. Scanning a list of forty to find
+     * "capacitor" is how the wrong line ends up on a bill, so the technician
+     * types three letters instead. Case is ignored: nobody billing at a
+     * doorstep is going to match the office's capitalisation.
+     */
+    const [query, setQuery] = useState("");
 
     useEffect(() => {
         const load = async () => {
@@ -644,9 +670,14 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
     const isApplianceService = selectedServiceKey === "AC_APPLIANCE";
     const applianceOptions = ["AC", "Refrigerator", "Washing Machine", "Microwave", "Water Purifier (RO)", "Other"];
 
-    const displayCatalog = isApplianceService && activeAppliance
+    const forAppliance = isApplianceService && activeAppliance
         ? catalog.filter(item => item.subCategory === activeAppliance)
         : catalog;
+
+    const term = query.trim().toLowerCase();
+    const displayCatalog = term
+        ? forAppliance.filter((item) => item.name.toLowerCase().includes(term))
+        : forAppliance;
 
     const grouped = displayCatalog.reduce((acc, item) => {
         const key = item.category || "part";
@@ -659,12 +690,27 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
             <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col">
                 <div className="border-b border-hairline px-5 py-4 flex items-center justify-between shrink-0">
                     <div>
-                        <h3 className="font-bold text-ink">Generate invoice</h3>
-                        <p className="text-xs text-ink-soft mt-0.5">{ticket.serviceLabel}</p>
+                        <h3 className="font-bold text-ink">
+                            {isEdit ? "Correct the bill" : "Generate invoice"}
+                        </h3>
+                        <p className="text-xs text-ink-soft mt-0.5">
+                            Step {step + 1} of {BILL_STEPS.length} · {BILL_STEPS[step]}
+                        </p>
                     </div>
                     <button onClick={onClose} className="text-ink-faint hover:text-ink-soft">
                         <X className="w-5 h-5" />
                     </button>
+                </div>
+
+                {/* Three segments rather than a number. Somebody halfway
+                    through a form wants to see how much is left, not read it. */}
+                <div className="flex gap-1 px-5 pb-3 shrink-0">
+                    {BILL_STEPS.map((label, i) => (
+                        <span
+                            key={label}
+                            className={"h-1 flex-1 rounded-full " + (i <= step ? "bg-brand" : "bg-sunken")}
+                        />
+                    ))}
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -674,6 +720,8 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                         </div>
                     ) : (
                         <>
+                            {step === 0 && (
+                            <>
                             <label className="cg-label block mb-2">Service Type</label>
                             <CustomDropdown
                                 className="mb-5"
@@ -707,7 +755,11 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                                 rows={2}
                                 className="cg-input mb-5"
                             />
+                            </>
+                            )}
 
+                            {step === 1 && (
+                            <>
                             {isApplianceService && !activeAppliance ? (
                                 <div className="p-4 bg-info-tint border border-hairline rounded-xl mb-4 text-center">
                                     <p className="text-sm font-semibold text-info">Please select an appliance type</p>
@@ -715,7 +767,7 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                                         Choose an appliance above to see its specific items.
                                     </p>
                                 </div>
-                            ) : displayCatalog.length === 0 ? (
+                            ) : forAppliance.length === 0 ? (
                                 <div className="p-4 bg-warn-tint border border-hairline rounded-xl mb-4">
                                     <p className="text-sm font-semibold text-warn">No price list set up</p>
                                     <p className="text-xs text-warn mt-1">
@@ -723,60 +775,96 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                                     </p>
                                 </div>
                             ) : (
-                                CATEGORY_ORDER.map((cat) =>
-                                    grouped[cat]?.length ? (
-                                        <div key={cat} className="mb-5">
-                                            <h4 className="text-xs font-bold text-ink-faint uppercase tracking-wide mb-2">
-                                                {CATEGORY_LABELS[cat]}
-                                            </h4>
-                                            {/* Two columns on tablets, single on phones - technicians
-                                                use both, and touch targets stay large either way */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                {grouped[cat].map((item) => {
-                                                    const isSelected = Boolean(selected[item._id]);
-                                                    const qty = selected[item._id] || 1;
-                                                    return (
-                                                        <div
-                                                            key={item._id}
-                                                            className={"border-2 rounded-xl transition-colors " + (isSelected ? "border-green-600 bg-brand-tint" : "border-hairline")}
-                                                        >
-                                                            <div className="flex items-center w-full min-h-[60px]">
-                                                                <button
-                                                                    onClick={() => toggleItem(item._id)}
-                                                                    className="flex-1 flex items-center gap-2.5 p-3.5 text-left"
-                                                                >
-                                                                    <div className={"w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 " + (isSelected ? "bg-brand border-green-600" : "border-hairline-strong")}>
-                                                                        {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="text-sm font-medium text-ink leading-tight">{item.name}</p>
-                                                                    </div>
-                                                                </button>
-                                                                {isSelected && cat === "part" && (
-                                                                    <div className="flex items-center gap-2 pr-3.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); changeQty(item._id, -1); }}
-                                                                            className="w-8 h-8 rounded-full bg-white border border-hairline-strong flex items-center justify-center active:bg-sunken shadow-sm"
-                                                                        >
-                                                                            <Minus className="w-4 h-4 text-ink" />
-                                                                        </button>
-                                                                        <span className="text-sm font-bold w-4 text-center">{qty}</span>
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); changeQty(item._id, 1); }}
-                                                                            className="w-8 h-8 rounded-full bg-white border border-hairline-strong flex items-center justify-center active:bg-sunken shadow-sm"
-                                                                        >
-                                                                            <Plus className="w-4 h-4 text-ink" />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                <>
+                                    <div className="relative mb-3">
+                                        <Search className="w-4 h-4 text-ink-faint absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                        <input
+                                            type="text"
+                                            value={query}
+                                            onChange={(e) => setQuery(e.target.value)}
+                                            placeholder={"Find an item in " + forAppliance.length + " charges"}
+                                            className="cg-input pl-10 pr-10"
+                                        />
+                                        {query && (
+                                            <button
+                                                onClick={() => setQuery("")}
+                                                aria-label="Clear the search"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* One list, not a card per item. A grid of
+                                        bordered tiles reads as forty separate
+                                        things to decide about; ruled rows in a
+                                        single frame read as one price list to
+                                        run an eye down, which is what it is. */}
+                                    {displayCatalog.length === 0 ? (
+                                        <div className="p-4 bg-sunken border border-hairline rounded-xl mb-4 text-sm text-ink-soft">
+                                            Nothing matches that. Clear the box, or add it as a line of your own below.
                                         </div>
-                                    ) : null
-                                )
+                                    ) : (
+                                        <div className="border border-hairline rounded-xl overflow-hidden mb-5">
+                                            {CATEGORY_ORDER.map((cat) =>
+                                                grouped[cat]?.length ? (
+                                                    <div key={cat}>
+                                                        <p className="px-3.5 py-1.5 bg-sunken text-[10px] font-bold text-ink-faint uppercase tracking-wide">
+                                                            {CATEGORY_LABELS[cat]}
+                                                        </p>
+
+                                                        {grouped[cat].map((item, i) => {
+                                                            const isSelected = Boolean(selected[item._id]);
+                                                            const qty = selected[item._id] || 1;
+                                                            return (
+                                                                <div
+                                                                    key={item._id}
+                                                                    className={"flex items-center pr-3.5 "
+                                                                        + (i > 0 ? "border-t border-hairline " : "")
+                                                                        + (isSelected ? "bg-brand-tint" : "")}
+                                                                >
+                                                                    <button
+                                                                        onClick={() => toggleItem(item._id)}
+                                                                        className="flex-1 flex items-center gap-2.5 px-3.5 py-2.5 text-left min-w-0"
+                                                                    >
+                                                                        <span className={"w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 " + (isSelected ? "bg-brand border-green-600" : "border-hairline-strong")}>
+                                                                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                                                        </span>
+                                                                        <span className="min-w-0">
+                                                                            <span className="block text-sm font-medium text-ink leading-tight">{item.name}</span>
+                                                                            <span className="block text-xs text-ink-soft tabular-nums">Rs {item.priceDisplay}</span>
+                                                                        </span>
+                                                                    </button>
+
+                                                                    {isSelected && cat === "part" && (
+                                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                                            <button
+                                                                                onClick={() => changeQty(item._id, -1)}
+                                                                                aria-label="One fewer"
+                                                                                className="w-7 h-7 rounded-full bg-white border border-hairline-strong flex items-center justify-center active:bg-sunken"
+                                                                            >
+                                                                                <Minus className="w-3.5 h-3.5 text-ink" />
+                                                                            </button>
+                                                                            <span className="text-sm font-bold w-4 text-center tabular-nums">{qty}</span>
+                                                                            <button
+                                                                                onClick={() => changeQty(item._id, 1)}
+                                                                                aria-label="One more"
+                                                                                className="w-7 h-7 rounded-full bg-white border border-hairline-strong flex items-center justify-center active:bg-sunken"
+                                                                            >
+                                                                                <Plus className="w-3.5 h-3.5 text-ink" />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : null
+                                            )}
+                                        </div>
+                                    )}
+                                </>
                             )}
 
                             <div className="mb-5">
@@ -824,6 +912,11 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                                 )}
                             </div>
 
+                            </>
+                            )}
+
+                            {step === 2 && (
+                            <>
                             {/* Payment method */}
                             <h4 className="text-xs font-bold text-ink-faint uppercase tracking-wide mb-2">How will they pay?</h4>
                             <div className="grid grid-cols-3 gap-2 mb-4">
@@ -908,6 +1001,13 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                                 </div>
                             )}
 
+                            </>
+                            )}
+
+                            {/* Kept outside the steps: a refusal from the
+                                server arrives while the technician is on the
+                                last one, and it has to stay on screen when he
+                                steps back to fix whatever it is about. */}
                             {formError && (
                                 <div className="p-3 bg-danger-tint border border-hairline rounded-lg text-sm text-danger">
                                     {formError}
@@ -922,18 +1022,44 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
                         <span className="text-sm font-semibold text-ink-soft">Total</span>
                         <span className="text-xl font-bold text-ink">Rs {total.toFixed(2)}</span>
                     </div>
-                    <button
-                        onClick={() => handleSubmit()}
-                        disabled={submitting || total === 0}
-                        className="w-full flex items-center justify-center gap-2 bg-ink hover:bg-black disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm"
-                    >
-                        {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {isEdit
-                            ? "Send corrected invoice"
-                            : paymentMethod === "cash"
-                                ? "Create invoice"
-                                : "Send payment link"}
-                    </button>
+                    <div className="flex gap-2">
+                        {step > 0 && (
+                            <button
+                                onClick={() => { setFormError(""); setStep((n) => n - 1); }}
+                                className="flex items-center justify-center gap-1.5 px-5 py-3 text-sm font-medium text-ink border border-hairline rounded-lg hover:bg-sunken"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                Back
+                            </button>
+                        )}
+
+                        {step < 2 ? (
+                            <button
+                                onClick={() => { setFormError(""); setStep((n) => n + 1); }}
+                                /* Nothing to be paid for yet. Letting him reach
+                                   the payment step with an empty bill only
+                                   means being sent back by the server. */
+                                disabled={step === 1 && total === 0}
+                                className="flex-1 flex items-center justify-center gap-2 bg-ink hover:bg-black disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm"
+                            >
+                                Next
+                                <ArrowRight className="w-4 h-4" />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleSubmit()}
+                                disabled={submitting || total === 0}
+                                className="flex-1 flex items-center justify-center gap-2 bg-ink hover:bg-black disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm"
+                            >
+                                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {isEdit
+                                    ? "Send corrected invoice"
+                                    : paymentMethod === "cash"
+                                        ? "Create invoice"
+                                        : "Send payment link"}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -1084,7 +1210,7 @@ const CashModal = ({ ticket, onClose, onDone, onError }) => {
                 {!isSplit && (
                     <div className="p-3 bg-warn-tint border border-hairline rounded-xl mb-4">
                         <p className="text-xs text-warn">
-                            This closes the job. The commission stays on your account until you settle it.
+                            This closes the job. The office's part stays on your account until you hand it in.
                         </p>
                     </div>
                 )}

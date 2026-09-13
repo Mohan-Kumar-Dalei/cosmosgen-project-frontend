@@ -258,6 +258,17 @@ const WalletDetail = ({ technicianId, onClose, onDone }) => {
     const [error, setError] = useState("");
     const [panel, setPanel] = useState(null); // payout | collect
 
+    /*
+     * The passbook opens short.
+     *
+     * A technician a few months in has a hundred ledger rows, and this dialog
+     * printed every one of them - so the thing the office actually came here
+     * to do, settle or pay out, ended up somewhere below a screen and a half
+     * of history. The recent rows answer almost every question; the rest is
+     * one click away for the day it is not.
+     */
+    const [showAll, setShowAll] = useState(false);
+
     const canSettle = hasPermission("SETTLE_WALLET");
 
     const load = useCallback(async () => {
@@ -372,36 +383,53 @@ const WalletDetail = ({ technicianId, onClose, onDone }) => {
                                 </div>
                             )}
 
-                            <h3 className="text-xs font-bold text-ink-faint uppercase tracking-wide mb-2">
-                                Passbook
-                            </h3>
+                            {/* The second number on each row lost its "Bal:"
+                                label when these rows were tightened, so the
+                                column says what it is once, up here. */}
+                            <div className="flex items-baseline justify-between mb-2">
+                                <h3 className="text-xs font-bold text-ink-faint uppercase tracking-wide">
+                                    Passbook
+                                </h3>
+                                <span className="text-[10px] text-ink-faint">amount · balance after</span>
+                            </div>
 
                             {data.transactions.length === 0 ? (
                                 <p className="text-sm text-ink-soft py-4 text-center">No transactions yet.</p>
                             ) : (
-                                <div className="space-y-1.5">
-                                    {data.transactions.map((t) => (
-                                        <div key={t._id} className="flex items-start justify-between gap-3 py-2.5 border-b border-hairline last:border-0">
-                                            <div className="min-w-0">
-                                                <p className="text-sm text-ink">{t.description}</p>
-                                                <p className="text-xs text-ink-faint mt-0.5">
-                                                    {new Date(t.createdAt).toLocaleDateString("en-IN", {
-                                                        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-                                                    })}
-                                                    {t.ticket?.ticketNumber ? " · " + t.ticket.ticketNumber : ""}
-                                                </p>
+                                <>
+                                    <div>
+                                        {(showAll ? data.transactions : data.transactions.slice(0, 8)).map((t) => (
+                                            <div key={t._id} className="flex items-baseline justify-between gap-3 py-1.5 border-b border-hairline last:border-0">
+                                                <div className="min-w-0">
+                                                    <p className="text-xs text-ink truncate">{t.description}</p>
+                                                    <p className="text-[10px] text-ink-faint">
+                                                        {shortDate(t.createdAt)}
+                                                        {t.ticket?.ticketNumber ? " · " + t.ticket.ticketNumber : ""}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className={"text-xs font-bold tabular-nums " + (t.type === "credit" ? "text-brand" : "text-warn")}>
+                                                        {t.type === "credit" ? "+" : "-"} {t.amountDisplay}
+                                                    </p>
+                                                    <p className="text-[10px] text-ink-faint tabular-nums">
+                                                        {t.balanceAfterDisplay}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="text-right shrink-0">
-                                                <p className={"text-sm font-bold " + (t.type === "credit" ? "text-brand" : "text-danger")}>
-                                                    {t.type === "credit" ? "+" : "-"} Rs {t.amountDisplay}
-                                                </p>
-                                                <p className="text-[10px] text-ink-faint">
-                                                    Bal: Rs {t.balanceAfterDisplay}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+
+                                    {data.transactions.length > 8 && (
+                                        <button
+                                            onClick={() => setShowAll((v) => !v)}
+                                            className="mt-2 text-xs font-semibold text-brand hover:underline"
+                                        >
+                                            {showAll
+                                                ? "Show less"
+                                                : "Show all " + data.transactions.length + " entries"}
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </>
                     ) : null}
@@ -505,16 +533,50 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
         return () => { cancelled = true; };
     }, [technicianId]);
 
-    // Every recent Razorpay payment on this technician, whichever kind it is:
-    // a due he cleared, a customer's online payment, the company's half of a
-    // split. Narrowing the list to one kind meant that when no settlement
-    // existed it quietly fell back to a customer's job payment - a reference
-    // for a different ticket, carrying a different amount.
-    //
-    // Ones already in the ledger stay on the list but cannot be picked.
-    // Hiding them made a reference the office can see in the passbook look as
-    // though it had never arrived at all.
-    const pool = refs;
+    /*
+     * Both lists carry only what is still open.
+     *
+     * They used to keep the finished rows, greyed out and unclickable, on the
+     * reasoning that hiding a reference the office can see in the passbook
+     * would make it look as though it had never arrived. In front of somebody
+     * recording money that reads the other way round: a job already settled
+     * and a payment already banked sit in the same list as the ones that are
+     * not, and the eye does not reliably tell a greyed row from a live one.
+     * What is finished belongs in the passbook, which is on the screen behind
+     * this one; this dialog is only about what is outstanding.
+     */
+    const pool = refs.filter((r) => !r.alreadyRecorded);
+    const openJobs = jobs.filter((j) => !j.settled);
+
+    /*
+     * What the list adds up to, before anything is ticked.
+     *
+     * Two different numbers and the office needs both: what these jobs were
+     * worth, which is what the customers paid, and what of that is still to
+     * come back. Added in paise from the figures rather than from the
+     * formatted strings on screen - a screen about money should not be doing
+     * arithmetic on text.
+     */
+    /*
+     * Money the vendor has sent that nobody has written down yet.
+     *
+     * "Received" and "recorded" are two different events and the gap between
+     * them is hours, sometimes a day. The list used to say "nothing received
+     * yet" against a job whose commission was already sitting in the company
+     * account, because it was reading the ledger - which is the record, not
+     * the money. That is exactly backwards for the person whose job is to
+     * turn one into the other.
+     */
+    const waiting = pool.filter((r) => r.kind === "settlement");
+    const waitingPaise = waiting.reduce((n, r) => n + (r.gatewayPaise || 0), 0);
+
+    const openTotals = openJobs.reduce(
+        (n, j) => ({
+            bill: n.bill + (j.billPaise || 0),
+            commission: n.commission + (j.commissionPaise || 0),
+        }),
+        { bill: 0, commission: 0 }
+    );
 
     const isVisitCheck = method === "Visit charge";
     const needsReference = NEEDS_REFERENCE.includes(method) && !NO_REFERENCE.includes(method);
@@ -528,8 +590,7 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
     // A customer's job payment is never offered this way. Picking one of
     // those by accident is what put a Rs 799 bill into a Rs 269.70
     // collection - they stay on the list to be read, not to be defaulted to.
-    const unrecorded = pool.filter((r) => !r.alreadyRecorded);
-    const pendingSettlement = unrecorded.find((r) => r.kind === "settlement");
+    const pendingSettlement = pool.find((r) => r.kind === "settlement");
     const autoReference = method === "Razorpay" && pendingSettlement ? pendingSettlement.reference : "";
     const value = refEdited ? reference : autoReference;
 
@@ -564,7 +625,6 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
     const confirmed = Boolean(checked?.captured && checked?.amountsAgree);
 
     const toggleJob = (job) => {
-        if (job.settled) return;
         const next = chosenJobs.includes(job.ticketNumber)
             ? chosenJobs.filter((t) => t !== job.ticketNumber)
             : [...chosenJobs, job.ticketNumber];
@@ -623,21 +683,16 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto p-6">
-                <h3 className="font-bold text-ink mb-1">
+            <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto p-5">
+                {/* The vendor's name and what they owe stand in for a heading
+                    and a paragraph. This dialog had a title, a sentence of
+                    instruction and a labelled vendor block before the first
+                    field - three rows saying what one row can. */}
+                <h3 className="font-bold text-ink mb-3">
                     {isPayout ? "Record a payout" : "Record a collection"}
                 </h3>
-                <p className="text-sm text-ink-soft mb-4">
-                    {isPayout
-                        ? "Send the money first, then record it here. This only updates the ledger."
-                        : "Take the money first, then record it here."}
-                </p>
 
-                {/* 1 - who */}
-                <p className="text-[11px] font-bold text-ink-faint uppercase tracking-wider mb-1.5">
-                    Vendor
-                </p>
-                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-sunken border border-hairline rounded-lg mb-4">
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2 bg-sunken border border-hairline rounded-lg mb-3">
                     <div className="min-w-0">
                         <p className="text-sm font-semibold text-ink truncate">{technicianName}</p>
                         {technicianPhone && <p className="text-xs text-ink-soft">{technicianPhone}</p>}
@@ -660,7 +715,7 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
                     step="0.01"
                     value={amount}
                     onChange={(e) => { setAmount(e.target.value); setError(""); }}
-                    className="cg-input mb-4"
+                    className="cg-input mb-3"
                 />
 
                 {/* 2b - which jobs. A settlement arrives as a bare amount
@@ -671,51 +726,89 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
                 {!isPayout && !isVisitCheck && (
                     refsLoading ? (
                         <div className="h-24 bg-sunken border border-hairline rounded-lg animate-pulse mb-4" />
-                    ) : jobs.length > 0 ? (
-                        <div className="mb-4">
+                    ) : openJobs.length > 0 ? (
+                        <div className="mb-3">
                             <label className="block text-[11px] font-bold text-ink-faint uppercase tracking-wider mb-1.5">
-                                Which jobs is this for?
+                                Recently closed tickets
+                                {waitingPaise > 0
+                                    ? <span className="text-info"> · Rs {(waitingPaise / 100).toFixed(2)} in, not recorded</span>
+                                    : <span> · nothing received yet</span>}
                             </label>
-                            <div className="border border-hairline rounded-lg overflow-hidden">
-                                <div className="max-h-44 overflow-y-auto">
-                                    {jobs.map((j) => {
+                            <div className="border border-hairline rounded-t-lg overflow-hidden">
+                                <div className="max-h-52 overflow-y-auto">
+                                    {openJobs.map((j) => {
                                         const on = chosenJobs.includes(j.ticketNumber);
                                         return (
                                             <div
                                                 key={j.ticketNumber}
                                                 role="button"
-                                                tabIndex={j.settled ? -1 : 0}
-                                                aria-disabled={j.settled}
+                                                tabIndex={0}
                                                 onClick={() => toggleJob(j)}
                                                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggleJob(j); }}
-                                                className={"px-3 py-2.5 border-b border-hairline last:border-b-0 flex items-center gap-3 " + (j.settled ? "opacity-50 cursor-not-allowed bg-sunken" : "cursor-pointer hover:bg-sunken ") + (on ? "bg-brand-tint" : "")}
+                                                className={"px-3 py-2 border-b border-hairline last:border-b-0 flex items-center gap-2.5 cursor-pointer hover:bg-sunken " + (on ? "bg-brand-tint" : "")}
                                             >
                                                 <span className={"w-4 h-4 shrink-0 rounded border flex items-center justify-center " + (on ? "bg-brand border-green-700" : "border-hairline-strong bg-white")}>
                                                     {on && <CheckCircle2 className="w-3 h-3 text-white" />}
                                                 </span>
+                                                {/* Enough to check a row against
+                                                    something real. A ticket
+                                                    number and an amount are two
+                                                    pieces of noise; the customer,
+                                                    the service and the day it
+                                                    closed are what the office can
+                                                    actually recognise - and two
+                                                    jobs at the same price are
+                                                    otherwise indistinguishable. */}
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-xs font-semibold text-ink truncate">
                                                         {j.ticketNumber}
                                                         {j.invoiceNumber ? " · " + j.invoiceNumber : ""}
                                                     </p>
+                                                    <p className="text-[11px] text-ink-soft truncate">
+                                                        {j.customerName || "Customer not recorded"}
+                                                        {j.serviceLabel ? " · " + j.serviceLabel : ""}
+                                                    </p>
                                                     <p className="text-[11px] text-ink-faint">
-                                                        {j.method} · bill Rs {j.billDisplay} ·{" "}
-                                                        {new Date(j.closedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                                                        {j.settled ? " · already settled" : ""}
+                                                        {new Date(j.closedAt).toLocaleDateString("en-IN", {
+                                                            day: "numeric", month: "short", year: "numeric",
+                                                        })}
+                                                        {" · bill Rs " + j.billDisplay}
                                                     </p>
                                                 </div>
-                                                <span className="text-xs font-bold text-ink shrink-0 tabular-nums">
-                                                    Rs {j.commissionDisplay}
-                                                </span>
+
+                                                {/* Ticking a job fills the amount in above, which on
+                                                    its own reads as though this were already done.
+                                                    It is not: the row is here because nothing has
+                                                    been written against it yet. Whether the money
+                                                    has actually arrived is a separate question, and
+                                                    the label above the list answers it. */}
+                                                <div className="shrink-0 text-right">
+                                                    <p className="text-xs font-bold text-ink tabular-nums">
+                                                        Rs {j.commissionDisplay}
+                                                    </p>
+                                                    <p className="text-[10px] font-semibold text-warn uppercase tracking-wide">
+                                                        to collect
+                                                    </p>
+                                                </div>
                                             </div>
                                         );
                                     })}
                                 </div>
                             </div>
+                            <div className="flex items-baseline justify-between gap-3 px-3 py-2 bg-sunken border border-t-0 border-hairline rounded-b-lg -mt-px">
+                                <span className="text-[11px] text-ink-soft">
+                                    {openJobs.length} ticket{openJobs.length === 1 ? "" : "s"} closed
+                                    {" · Rs " + (openTotals.bill / 100).toFixed(2)}
+                                </span>
+                                <span className="text-[11px] font-bold text-ink tabular-nums">
+                                    To collect Rs {(openTotals.commission / 100).toFixed(2)}
+                                </span>
+                            </div>
+
                             <p className="text-[11px] text-ink-faint mt-1.5">
                                 {chosenJobs.length > 0
                                     ? chosenJobs.length + " job" + (chosenJobs.length === 1 ? "" : "s")
-                                      + " selected — the amount above is their commission"
+                                      + " selected — the amount above is what they come to"
                                     : "Tap the jobs this money clears. Cash jobs only — online and split settle themselves."}
                             </p>
                         </div>
@@ -726,7 +819,7 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
                 <label className="block text-[11px] font-bold text-ink-faint uppercase tracking-wider mb-1.5">
                     How was it {isPayout ? "sent" : "received"}?
                 </label>
-                <div className="mb-4">
+                <div className="mb-3">
                     <CustomDropdown
                         value={method}
                         onChange={(val) => {
@@ -783,16 +876,14 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
                             <div className="max-h-40 overflow-y-auto">
                                 {pool.map((r) => {
                                     const isPicked = value.trim() === r.reference;
-                                    const spent = r.alreadyRecorded;
                                     return (
                                         <div
                                             key={r.reference}
                                             role="button"
-                                            tabIndex={spent ? -1 : 0}
-                                            aria-disabled={spent}
-                                            onClick={() => { if (!spent) editReference(r.reference); }}
-                                            onKeyDown={(e) => { if (!spent && (e.key === "Enter" || e.key === " ")) editReference(r.reference); }}
-                                            className={"w-full text-left px-3 py-2.5 border-b border-hairline last:border-b-0 " + (spent ? "opacity-50 cursor-not-allowed bg-sunken" : "cursor-pointer hover:bg-sunken ") + (isPicked ? "bg-brand-tint" : "")}
+                                            tabIndex={0}
+                                            onClick={() => editReference(r.reference)}
+                                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") editReference(r.reference); }}
+                                            className={"w-full text-left px-3 py-2 border-b border-hairline last:border-b-0 cursor-pointer hover:bg-sunken " + (isPicked ? "bg-brand-tint" : "")}
                                         >
                                             <div className="flex items-baseline justify-between gap-3">
                                                 <CopyText
@@ -815,11 +906,9 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
                                                     {r.ticketNumber ? " · " + r.ticketNumber : ""}
                                                     {r.billDisplay ? " · bill Rs " + r.billDisplay : ""}
                                                 </span>
-                                                {spent ? (
-                                                    <span className="font-semibold ml-auto shrink-0">Already recorded</span>
-                                                ) : isPicked ? (
+                                                {isPicked && (
                                                     <span className="text-brand font-semibold ml-auto shrink-0">Using this</span>
-                                                ) : null}
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -828,7 +917,8 @@ const SettleDialog = ({ mode, technicianId, technicianName, technicianPhone, max
                         </div>
                     ) : (
                         <p className="text-xs text-ink-faint mt-2">
-                            No Razorpay payments on this vendor yet — type the reference by hand.
+                            Nothing from this vendor waiting to be recorded. Anything he has sent before
+                            is already in his passbook — type the reference by hand if a new one has come in.
                         </p>
                     )
                 )}
