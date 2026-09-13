@@ -76,13 +76,13 @@ export const FlowStack = () => {
                     // Each one parks a little lower than the last, so the edge of
                     // everything underneath stays in view like a fanned deck
                     style={{ top: "calc(5.5rem + " + i * 16 + "px)", transformOrigin: "top center" }}
-                    className="sticky rounded-[28px] overflow-hidden border border-hairline shadow-lift"
+                    className="cg-stack-card sticky rounded-[28px] overflow-hidden border border-hairline shadow-lift"
                 >
                     <div className="relative" style={{ background: step.ground }}>
                         <div className="relative p-8 sm:p-12 lg:p-14 min-h-[300px] sm:min-h-[340px] flex flex-col justify-between gap-10">
                             <div className="flex items-start justify-between gap-6">
                                 <span style={{ background: "var(--step-chip)" }}
-                                    className="inline-flex items-center gap-2.5 h-8 pl-2 pr-4 rounded-full backdrop-blur-sm text-[11px] font-bold uppercase tracking-[0.14em] text-ink-soft">
+                                    className="cg-glass inline-flex items-center gap-2.5 h-8 pl-2 pr-4 rounded-full text-[11px] font-bold uppercase tracking-[0.14em] text-ink-soft">
                                     <span className="w-5 h-5 rounded-full bg-accent text-white grid place-items-center text-[10px] tabular-nums">
                                         {i + 1}
                                     </span>

@@ -490,7 +490,17 @@ export const useLiftedFooter = () => {
         const el = footer.current;
         if (!el || typeof ResizeObserver === "undefined") return undefined;
 
-        const wide = window.matchMedia("(min-width: 1024px)");
+        /*
+         * A tablet gets the lift; a phone does not.
+         *
+         * It used to start at 1024, which put tablets in with phones and gave
+         * them the plain stacked footer. A tablet has the height for it and is
+         * held the way a laptop is looked at, so it reads the same. Below this
+         * the footer is simply the end of the page, which is what a phone
+         * wants: a panel pinned under a short screen is a second page in the
+         * way, not a reveal.
+         */
+        const wide = window.matchMedia("(min-width: 768px)");
 
         const measure = () => {
             const height = el.offsetHeight;

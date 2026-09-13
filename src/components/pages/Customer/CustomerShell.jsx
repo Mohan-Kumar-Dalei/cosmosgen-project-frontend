@@ -147,7 +147,24 @@ export const CustomerShell = ({ children }) => {
          * do not run in a hidden tab, and a page opened in one would sit there
          * with a square corner until somebody looked at it.
          */
-        const read = setTimeout(() => {
+        const decide = () => {
+            /*
+             * No corner on a phone, because there is nothing behind it.
+             *
+             * The curve exists so the page can end over the footer rather than
+             * against it, and the footer is only underneath from a tablet up.
+             * On a phone it is simply the next thing on the page, so a rounded
+             * sheet and a strip of footer colour behind it round onto nothing
+             * and read as a lift that has gone wrong.
+             *
+             * A media query, not the lift measurement: this is a fact about
+             * the screen, settled before anybody scrolls, and it stays settled.
+             */
+            if (!window.matchMedia("(min-width: 768px)").matches) {
+                setEnds("");
+                return;
+            }
+
             const bands = host.querySelectorAll("section");
             const last = bands[bands.length - 1];
 
@@ -157,9 +174,19 @@ export const CustomerShell = ({ children }) => {
                 && ground !== "transparent";
 
             setEnds(opaque ? "band" : "page");
-        });
+        };
 
-        return () => clearTimeout(read);
+        const read = setTimeout(decide);
+
+        // Turning a tablet on its side crosses that line, so the answer is
+        // worked out again - on the screen changing, never on a scroll
+        const wide = window.matchMedia("(min-width: 768px)");
+        wide.addEventListener("change", decide);
+
+        return () => {
+            clearTimeout(read);
+            wide.removeEventListener("change", decide);
+        };
         // `page` is a ref from the hook above and never changes identity;
         // naming it here only to satisfy the rule would suggest otherwise
         // eslint-disable-next-line react-hooks/exhaustive-deps

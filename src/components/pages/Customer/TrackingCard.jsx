@@ -101,7 +101,7 @@ export const TrackingCard = () => {
                     </span>
                 </span>
 
-                <span className="absolute left-3 bottom-3 inline-flex items-center h-6 px-2.5 rounded-full bg-surface/90 backdrop-blur-sm shadow-card text-[11px] font-semibold tabular-nums">
+                <span className="absolute left-3 bottom-3 inline-flex items-center h-6 px-2.5 rounded-full bg-surface/90 cg-glass shadow-card text-[11px] font-semibold tabular-nums">
                     2.4 km away
                 </span>
             </div>

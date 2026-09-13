@@ -1270,9 +1270,7 @@ label[for] {
    rasterisation for the life of the page.
    --------------------------------------------------------------- */
 
-@media (pointer: coarse), (max-width: 1023px) {
-    .cg-mesh-a, .cg-mesh-b { animation: none; }
-}
+
 
 /* ---------------------------------------------------------------
    Frosted glass, on the machines that can afford it.
@@ -1649,4 +1647,94 @@ label[for] {
         var(--color-footer) 40px,
         transparent 40px
     );
+}
+
+/* ---------------------------------------------------------------
+   And a phone paints the decoration once, then leaves it alone.
+
+   Everything in this list is ambient: orbs drifting behind a band,
+   a dot pulsing on a map, a line tracing a route. None of it is
+   telling a reader anything, and every one of them is a large soft
+   shape being redrawn for the life of the page. On a desktop that
+   is free. On a mid-range Android it is the budget that the words
+   and pictures actually arriving on screen needed - which is why
+   the reveals felt heavy while the scrolling itself was fine.
+
+   Held still they look identical in a screenshot, which is what a
+   reader sees of them anyway between one scroll and the next.
+
+   Last in the file on purpose. Every selector here has the same
+   weight as the rule it is overriding, so the only thing deciding
+   the winner is which comes later - and `.cg-ping` is defined some
+   way below where this block first sat, which is exactly why it
+   went on pulsing after the rest had stopped.
+   --------------------------------------------------------------- */
+
+@media (pointer: coarse), (max-width: 1023px) {
+    .cg-mesh-a,
+    .cg-mesh-b,
+    .cg-drift-a,
+    .cg-drift-b,
+    .cg-ping,
+    .cg-route,
+    .cg-runner,
+    .cg-rail {
+        animation: none;
+    }
+
+    /* A layer promoted for an animation that no longer runs is a
+       phone holding a large texture in memory for nothing */
+    .cg-blob { will-change: auto; }
+}
+
+/* ---------------------------------------------------------------
+   The two things an iPhone cannot afford.
+
+   The site ran well on Android and badly on an iPhone, which is a
+   very particular shape of problem. Two reasons, and they compound.
+
+   A phone screen is drawn at three device pixels per CSS pixel
+   rather than two, so every gradient, texture and soft shadow costs
+   more than twice what the same page costs on Android. And Safari
+   is slower than Chrome at exactly the two properties this design
+   leaned on: a backdrop filter, which is a read of everything
+   behind an element followed by a blur of that read, and an
+   animated `filter: blur`, which cannot be handed to the
+   compositor and is re-run every frame.
+
+   The worst of it was the step deck on the home page: five sticky
+   cards, each with a wide soft shadow, each holding a frosted pill,
+   all overlapping and all moving at once.
+
+   Written as additions for a pointer that hovers, rather than as
+   removals for one that does not - a `backdrop-filter: none` is the
+   property's own initial value and the minifier throws it away.
+   --------------------------------------------------------------- */
+
+@media (pointer: fine) and (min-width: 1024px) {
+    .cg-glass {
+        backdrop-filter: blur(4px);
+    }
+}
+
+@media (pointer: coarse), (max-width: 1023px) {
+    /* A shadow a phone can draw. Sixty pixels of blur under five
+       cards that are all sliding is a repaint of most of the screen
+       every frame; sixteen reads the same at this size. */
+    .cg-stack-card {
+        box-shadow: 0 8px 16px -10px rgba(12, 20, 28, 0.35);
+    }
+
+    /* And the assistant's answer arrives by fading and rising, with
+       no blur to unwind. The blur was the nicest part of it on a
+       desktop and the most expensive thing on the page on a phone. */
+    .cg-answer-in,
+    .cg-char {
+        animation-name: cg-soft-in;
+    }
+}
+
+@keyframes cg-soft-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
 }
