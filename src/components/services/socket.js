@@ -15,7 +15,24 @@ const createRoleSocket = (role) => {
     const s = io(SOCKET_URL, {
         withCredentials: true,
         autoConnect: false,
-        transports: ["websocket", "polling"],
+
+        /*
+         * Polling first, then upgrade - which is socket.io's own default, and
+         * it was overridden here for a speed that is not worth what it costs.
+         *
+         * With websocket first there is no fallback worth the name: the
+         * connection is either a websocket or it is nothing. Behind a proxy
+         * that answers the upgrade with 101 and then relays no frames - which
+         * is exactly what a hosting platform's rewrite rule does - the client
+         * sits on an open socket that never speaks, and twenty seconds later
+         * reports `connect_error: timeout`. No panel gets a live update, and
+         * the message names neither the proxy nor the transport.
+         *
+         * This way the connection is up on the first round trip over plain
+         * HTTP, and the websocket upgrade is attempted afterwards, in the
+         * background, where failing costs nothing but a little efficiency.
+         */
+        transports: ["polling", "websocket"],
         auth: { role },
     });
 

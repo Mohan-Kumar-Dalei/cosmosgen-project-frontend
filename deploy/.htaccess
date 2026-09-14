@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# Apache (Hostinger, cPanel) - copy this next to index.html in the build.
+#
+#   cp deploy/.htaccess dist/.htaccess
+#
+# Without it every address except "/" is a 404: the router lives in
+# JavaScript, so the server is asked for a file called /account that was
+# never built. Opening a shared link, or simply refreshing the page, is
+# enough to hit it.
+# ---------------------------------------------------------------------------
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # A real file or folder is served as itself - the bundle, the images, the
+  # fonts. Only what does not exist on disk is handed to the app.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# The bundle's filenames carry a content hash, so a changed file is a new
+# name and can be cached forever. index.html must not be: it is the one file
+# that names the others, and a cached copy points at a build that is gone.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2?|ttf|svg|png|jpg|jpeg|webp|gif|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "index\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

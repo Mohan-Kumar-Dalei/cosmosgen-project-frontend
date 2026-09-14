@@ -1,0 +1,8 @@
+{
+  "_comment": "Vercel only. The two proxy rules put the API under this site's own origin, which makes the session cookie first-party - the alternative is a cross-site cookie that browsers and privacy extensions are free to drop. The last rule is the SPA fallback and must stay last.",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://api.example.com/api/:path*" },
+    { "source": "/socket.io/:path*", "destination": "https://api.example.com/socket.io/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
