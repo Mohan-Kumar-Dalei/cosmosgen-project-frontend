@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { api, getErrorMessage } from "../../services/api";
 import { can } from "../../config/permissions";
 import { AdminAuthContext } from "./adminAuthContext";
@@ -6,6 +7,13 @@ import { AdminAuthContext } from "./adminAuthContext";
 export const AdminAuthProvider = ({ children }) => {
     const [admin, setAdmin] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { pathname } = useLocation();
+
+    // The developer platform signs in with the same owner account, so its
+    // pages need the session restored the same way
+    const isAdminRoute = pathname.startsWith("/admin")
+        || pathname.startsWith("/owner")
+        || pathname.startsWith("/developer");
 
     const isSuperAdmin = admin?.role === "superadmin";
     const hasPermission = (permission) => can(admin?.role, permission);
@@ -23,24 +31,29 @@ export const AdminAuthProvider = ({ children }) => {
         }
     }, []);
 
-    // Restore the session on load. Only on admin routes - a technician
-    // opening their own panel has no admin cookie, so this would just log
-    // a 401 in their console for nothing.
+    /*
+     * Restore the session whenever an office page is on screen.
+     *
+     * Only on those pages: a customer reading the website, or a technician in
+     * their own panel, has no admin cookie, so asking would log a 401 in their
+     * console and buy nothing.
+     *
+     * The route is read from the router rather than from `window.location`,
+     * which is what it used to do. That version ran once, at mount, against
+     * the address the tab happened to open at - so an admin who landed on the
+     * homepage and clicked through to /admin/login was never checked, and saw
+     * a login form despite holding a perfectly good cookie until they
+     * reloaded the page.
+     */
     useEffect(() => {
-        const path = window.location.pathname;
-        // The developer platform signs in with the same owner account, so
-        // its pages need the session restored the same way
-        const isAdminRoute = path.startsWith("/admin")
-            || path.startsWith("/owner")
-            || path.startsWith("/developer");
+        if (!isAdminRoute) return;
 
-        if (!isAdminRoute) {
-            setLoading(false);
-            return;
-        }
+        // Already answered - moving between office pages must not re-ask on
+        // every navigation, which is what made this a provider and not a hook
+        if (admin) return;
 
         checkSession();
-    }, [checkSession]);
+    }, [isAdminRoute, admin, checkSession]);
 
     const login = async (email, password, portal, secret) => {
         try {
@@ -77,7 +90,18 @@ export const AdminAuthProvider = ({ children }) => {
 
     return (
         <AdminAuthContext.Provider
-            value={{ admin, loading, login, logout, checkSession, isSuperAdmin, hasPermission }}
+            value={{
+                admin,
+                // Only an office page is ever waiting on an answer. Elsewhere
+                // no request goes out at all, so reporting "still loading"
+                // would leave anything reading this spinning for good.
+                loading: isAdminRoute && loading,
+                login,
+                logout,
+                checkSession,
+                isSuperAdmin,
+                hasPermission,
+            }}
         >
             {children}
         </AdminAuthContext.Provider>

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AdminProtectedRoute } from "../components/pages/Protected/ProtectedRoute";
 import { DeveloperRoute } from "../components/pages/Developer/DeveloperRoute";
 import { CustomerProvider } from "../components/pages/Customer/customerAuth";
@@ -94,11 +94,15 @@ class RouteErrorBoundary extends React.Component {
 
 const AppRouter = () => {
     return (
-        <BrowserRouter>
+        <>
             {/* Wrapped around everything rather than around the customer
                 routes alone: the header on those pages reads the session, and
                 a provider mounted inside a route remounts - and re-asks the
-                server who this is - on every navigation between them. */}
+                server who this is - on every navigation between them.
+
+                `BrowserRouter` itself lives in App, above the admin provider,
+                so that provider can read the current route instead of the
+                address bar as it was when the tab opened. */}
             <CustomerProvider>
                 <AreaProvider>
             <RouteErrorBoundary>
@@ -198,7 +202,7 @@ const AppRouter = () => {
             </RouteErrorBoundary>
                 </AreaProvider>
             </CustomerProvider>
-        </BrowserRouter>
+        </>
     );
 };
 
