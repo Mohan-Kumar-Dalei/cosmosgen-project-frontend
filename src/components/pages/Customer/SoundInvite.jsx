@@ -28,11 +28,28 @@ import { declineSound, setSound, soundWasDeclined } from "./sound";
 const GAP = 10;
 const WIDTH = 272;
 
+/*
+ * Once per page load, not once per page.
+ *
+ * Every customer page mounts its own shell, so this component mounts again on
+ * every navigation - and the note was appearing on Services, then on Pricing,
+ * then on FAQ, asking the same question of somebody who had already read it.
+ *
+ * A module-level flag is exactly the right lifetime for "already asked": it
+ * survives every client-side navigation, because the module is loaded once,
+ * and it is gone the moment the browser actually reloads the page - which is
+ * the moment the browser has silenced sound again and the question becomes
+ * worth asking. Deliberately not localStorage, which would remember across
+ * reloads too and never ask again.
+ */
+let askedThisLoad = false;
+
 export const SoundInvite = () => {
     const [at, setAt] = useState(null);
 
     useEffect(() => {
-        if (soundWasDeclined()) return undefined;
+        if (soundWasDeclined() || askedThisLoad) return undefined;
+        askedThisLoad = true;
 
         /*
          * Asked on every load, and not only the first.

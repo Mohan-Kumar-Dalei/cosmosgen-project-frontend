@@ -302,6 +302,50 @@ const CustomerAssistant = () => {
 
                 <div className="relative mx-auto max-w-6xl px-5 sm:px-8 py-10 lg:py-14 grid lg:grid-cols-[1fr_300px] gap-10 lg:gap-14 items-start rounded-bl-2xl">
                 <div>
+                    {/*
+                      * The thread needs an account now.
+                      *
+                      * It used to answer anybody, and the reasoning was sound
+                      * - the questions that decide whether somebody becomes a
+                      * customer all come before the account does. What settled
+                      * it the other way is that every turn is a model call the
+                      * company pays for, and an endpoint that spends money on
+                      * behalf of strangers is one that gets found.
+                      *
+                      * Everything explaining what the assistant is stays on
+                      * the page, above and beside this - so a visitor still
+                      * learns what it does before being asked for anything.
+                      */}
+                    {ready && !customer ? (
+                        <div className="h-[min(58vh,540px)] rounded-3xl bg-canvas p-6 grid place-items-center text-center">
+                            <div className="max-w-sm">
+                                <span className="mx-auto w-12 h-12 grid place-items-center rounded-full bg-accent-tint text-accent">
+                                    <Bot className="w-6 h-6" />
+                                </span>
+
+                                <p className="mt-4 font-display font-semibold text-[17px] tracking-[-0.01em]">
+                                    Sign in to ask
+                                </p>
+                                <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">
+                                    Your number and a code on WhatsApp - no password. After that the
+                                    assistant answers here, and can read back every job we have done
+                                    for you.
+                                </p>
+
+                                <Link
+                                    to="/account"
+                                    className="mt-5 inline-flex items-center gap-2 h-11 px-6 rounded-full bg-accent text-white text-[14px] font-semibold hover:bg-accent-deep transition-colors"
+                                >
+                                    Sign in
+                                </Link>
+
+                                <p className="mt-4 text-[12.5px] leading-relaxed text-ink-faint">
+                                    In a hurry? WhatsApp us and the same assistant answers there.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                    <>
                     <div
                         ref={thread}
                         className="h-[min(58vh,540px)] overflow-y-auto rounded-3xl bg-canvas p-5 sm:p-6 flex flex-col gap-4"
@@ -422,6 +466,8 @@ const CustomerAssistant = () => {
                             {thinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
                         </button>
                     </form>
+                    </>
+                    )}
                 </div>
 
                 <aside className="lg:sticky lg:top-24 flex flex-col gap-8">

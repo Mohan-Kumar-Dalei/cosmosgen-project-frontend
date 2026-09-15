@@ -23,7 +23,7 @@ const IK = "https://ik.imagekit.io/h7wep5nji/cosmosgen/";
  * replaced without being renamed; it costs one fresh fetch per picture and
  * nothing after that.
  */
-const V = "2026-09-13";
+const V = "2026-09-15";
 
 /** A bundled picture, stamped so a replaced file is actually seen. */
 const pic = (file) => IK + file + "?v=" + V;

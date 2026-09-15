@@ -80,9 +80,9 @@ const TechnicianPanel = () => {
     useEffect(() => {
         if (data?.profile?._id) {
             const currentPath = window.location.pathname;
-            if (currentPath.startsWith("/technician/admin") && !currentPath.includes(data.profile._id)) {
-                const suffix = currentPath.replace("/technician/admin", "");
-                navigate(`/technician/admin/${data.profile._id}${suffix}`, { replace: true });
+            if (currentPath.startsWith("/vendor/admin") && !currentPath.includes(data.profile._id)) {
+                const suffix = currentPath.replace("/vendor/admin", "");
+                navigate(`/vendor/admin/${data.profile._id}${suffix}`, { replace: true });
             }
         }
     }, [data, navigate]);
@@ -151,7 +151,7 @@ const TechnicianPanel = () => {
             notifyAlert("Account blocked", p?.message || "Contact the office.", {
                 panel: "Vendor", duration: 30000,
             });
-            navigate("/technician/admin/login");
+            navigate("/vendor/admin/login");
         };
 
         // He is standing in the customer's house waiting for this, so it has
@@ -298,7 +298,7 @@ const TechnicianPanel = () => {
         } catch {
             // ignore
         }
-        navigate("/technician/admin/login");
+        navigate("/vendor/admin/login");
     };
 
     if (loading) {
@@ -372,7 +372,7 @@ const TechnicianPanel = () => {
                             <p className="font-semibold text-sm truncate text-white">{profile.name}</p>
                             <p className="text-[11px] text-white/45 truncate flex items-center gap-1">
                                 <MapPin className="w-2.5 h-2.5 shrink-0" />
-                                {profile.area || "No location"}
+                                {profile.city || "No location"}
                             </p>
                         </div>
                     </div>
@@ -418,7 +418,7 @@ const TechnicianPanel = () => {
 
                 <div className="p-3 border-t border-panel-line space-y-1">
                     <Link
-                        to="/technician/admin/profile"
+                        to="/vendor/admin/profile"
                         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-sm font-medium text-white/55 hover:bg-white/5 hover:text-white transition-colors"
                     >
                         <User className="w-4 h-4 text-white/40" /> Profile
@@ -447,7 +447,7 @@ const TechnicianPanel = () => {
                                 {profile.name?.split(" ")[0]}
                             </p>
                             <p className="text-[11px] text-ink-soft flex items-center gap-0.5 truncate">
-                                <MapPin className="w-2.5 h-2.5 shrink-0" /> {profile.area || "No location"}
+                                <MapPin className="w-2.5 h-2.5 shrink-0" /> {profile.city || "No location"}
                             </p>
                         </div>
                     </div>
@@ -488,7 +488,7 @@ const TechnicianPanel = () => {
                                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                                     <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg border border-hairline py-1 z-20">
                                         <Link
-                                            to="/technician/admin/profile"
+                                            to="/vendor/admin/profile"
                                             className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink-soft active:bg-sunken"
                                         >
                                             <User className="w-4 h-4" /> Profile

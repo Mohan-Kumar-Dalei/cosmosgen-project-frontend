@@ -1,13 +1,10 @@
 import { Navigate } from "react-router-dom";
 import { useAdminAuth } from "../Admin/adminAuthContext";
+import { BrandLoader } from "../../ui/BrandLoader";
 
-// Spinner while the session check runs, so the login page doesn't flash.
-const FullScreenLoader = () => (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-canvas">
-        <div className="w-10 h-10 border-4 border-green-700 border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-ink-soft font-medium">Loading...</p>
-    </div>
-);
+// Shown while the session check runs, so the login page doesn't flash at
+// somebody who is already signed in.
+const FullScreenLoader = () => <BrandLoader label="Checking your session" />;
 
 // Pass requiredPermission to limit a route to a specific role.
 export const AdminProtectedRoute = ({ children, requiredPermission }) => {

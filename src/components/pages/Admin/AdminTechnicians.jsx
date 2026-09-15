@@ -97,7 +97,7 @@ const AdminTechnicians = () => {
     // sidebar knew nothing about an application and the tab only knew once
     // the page had loaded. It is one server figure now, like every other
     // badge in the panel.
-    const { counts, globalRefreshTrigger } = useAdminData();
+    const { counts, refreshCounts, globalRefreshTrigger } = useAdminData();
     const pendingCount = counts.techniciansPending || 0;
     const [view, setView] = useState("roster");
     const [status, setStatus] = useState("");
@@ -150,6 +150,20 @@ const AdminTechnicians = () => {
         setFlash(message);
         setTimeout(() => setFlash(""), 4000);
         load(view, status, search);
+
+        /*
+         * The badge is counted on the server, so it has to be asked again.
+         *
+         * Reloading the list alone left "3 applications waiting" sitting over
+         * a screen with two - the list came from this page's own request and
+         * the number came from the sidebar's, and only one of them had been
+         * told anything happened. It cleared on the next page change, which
+         * reads as the panel not having noticed the approval at all.
+         *
+         * The tickets panel hit this first and fixed it the same way; this one
+         * was simply missed.
+         */
+        refreshCounts();
     };
 
     return (
@@ -402,7 +416,7 @@ const VendorCard = ({ t, view, onOpen }) => {
 
                 <p className="relative z-10 cg-fact mt-2 w-full">
                     <MapPin className="w-4 h-4 text-brand shrink-0" />
-                    <span className="truncate">{t.area || "No area set"}</span>
+                    <span className="truncate">{t.city || "No town set"}</span>
                 </p>
 
                 <div className="relative z-10 flex items-center gap-2.5 mt-5">
@@ -570,8 +584,19 @@ const TechnicianDetail = ({ technicianId, onClose, onChanged }) => {
                                         <Phone className="w-3.5 h-3.5" /> {tech.phone}
                                     </a>
                                     <p className="text-xs text-ink-soft mt-0.5">
-                                        {tech.area}, {tech.state} — {tech.pincode}
+                                        {[tech.area, tech.city].filter(Boolean).join(", ")}, {tech.state} — {tech.pincode}
                                     </p>
+
+                                    {/* The address in his own words, which is
+                                        what somebody on the desk reads out when
+                                        a pin lands a few streets off and they
+                                        have to ring back. It is the reason the
+                                        client asked for it. */}
+                                    {tech.address && (
+                                        <p className="text-xs text-ink-soft mt-0.5">
+                                            {tech.address}
+                                        </p>
+                                    )}
                                     <p className="text-xs text-ink-faint mt-0.5">
                                         Signed up {new Date(tech.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                                     </p>

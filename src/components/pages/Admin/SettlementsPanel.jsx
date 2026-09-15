@@ -174,9 +174,9 @@ const SettlementRow = ({ row }) => {
                                 <Phone className="w-3 h-3" /> {row.technician.phone}
                             </a>
                         )}
-                        {row.technician?.area && (
+                        {row.technician?.city && (
                             <span className="flex items-center gap-0.5 truncate">
-                                <MapPin className="w-3 h-3 shrink-0" /> {row.technician.area}
+                                <MapPin className="w-3 h-3 shrink-0" /> {row.technician.city}
                             </span>
                         )}
                     </div>

@@ -5,7 +5,7 @@ import { api, getErrorMessage } from "../../../services/api";
 import { adminSocket, connectAdminSocket } from "../../../services/socket";
 import { useAdminData } from "../AdminDataContext";
 import CustomDropdown from "../../../ui/CustomDropdown";
-import LocationMap from "../../../ui/LocationMap";
+import EmbedMap from "../../../ui/EmbedMap";
 import MapModal from "../../../ui/MapModal";
 import useAreaLookup from "../../../ui/useAreaLookup";
 import NotifyBadge from "../../../ui/NotifyBadge";
@@ -591,12 +591,26 @@ const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
                                     className="relative w-full mb-4 group rounded-xl overflow-hidden"
                                     title="Open the full map"
                                 >
+                                    {/*
+                                      * A thumbnail, and it was never touched.
+                                      *
+                                      * Gestures were already off and the whole
+                                      * thing sits under `pointer-events-none` -
+                                      * it is a picture of where the customer
+                                      * is, and tapping it opens the real map.
+                                      * The JavaScript SDK was loading here on
+                                      * every ticket an admin opened, at about
+                                      * $7 per thousand, to draw a pin nobody
+                                      * could move. The free embed shows the
+                                      * same place for nothing.
+                                      */}
                                     <div className="pointer-events-none">
-                                        <LocationMap
-                                            markers={[{ lat, lon, color: "#15803d", title: "Customer" }]}
-                                            className="h-44"
+                                        <EmbedMap
+                                            lat={lat}
+                                            lon={lon}
                                             zoom={15}
-                                            gestureHandling="none"
+                                            title="Customer"
+                                            className="h-44"
                                         />
                                     </div>
                                     <span className="absolute bottom-2 right-2 text-[11px] font-semibold bg-white/95 text-ink px-2.5 py-1 rounded-lg shadow-sm group-hover:bg-white">

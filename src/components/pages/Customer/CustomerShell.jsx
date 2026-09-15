@@ -603,8 +603,8 @@ const Footer = ({ inner, lifted, mark }) => (
                     <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/35">Work with us</p>
                     <div className="mt-4 flex flex-col gap-2.5 text-sm text-white/60">
                         <Link to="/join" className="hover:text-white transition-colors">Join as an engineer</Link>
-                        <Link to="/technician/admin/register" className="hover:text-white transition-colors">Register</Link>
-                        <Link to="/technician/admin/login" className="hover:text-white transition-colors">Engineer sign in</Link>
+                        <Link to="/vendor/admin/register" className="hover:text-white transition-colors">Register</Link>
+                        <Link to="/vendor/admin/login" className="hover:text-white transition-colors">Engineer sign in</Link>
                     </div>
                 </div>
             </div>

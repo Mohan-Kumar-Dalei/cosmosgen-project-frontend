@@ -55,6 +55,17 @@ export const DeveloperShell = ({ children }) => {
                             </span>
                         )}
 
+                        {/* The map bill sits beside the keys rather than
+                            inside them: a key answers "is this working", and
+                            what the maps cost is a different question that
+                            happens to be asked by the same person. */}
+                        <Link
+                            to="/developer/maps"
+                            className="text-[12.5px] text-[var(--dev-soft)] hover:text-[var(--dev-ink)] transition-colors"
+                        >
+                            Map spend
+                        </Link>
+
                         <Link
                             to="/admin"
                             className="text-[12.5px] text-[var(--dev-soft)] hover:text-[var(--dev-ink)] transition-colors"

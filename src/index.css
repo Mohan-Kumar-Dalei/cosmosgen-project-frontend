@@ -1487,14 +1487,19 @@ label[for] {
 }
 
 @keyframes cg-char-in {
+    /* No blur here any more.
+       An animated filter makes the browser redraw that element's pixels every
+       frame, and with one span per word there can still be seventy of them
+       going at once. Opacity and a small lift are both handled by the
+       compositor on a layer that is already drawn, which is the difference
+       between an answer that writes itself and a phone that stutters while it
+       does. */
     from {
         opacity: 0;
-        filter: blur(6px);
-        transform: translate3d(0, 3px, 0);
+        transform: translate3d(0, 2px, 0);
     }
     to {
         opacity: 1;
-        filter: blur(0);
         transform: none;
     }
 }
@@ -1868,3 +1873,30 @@ label[for] {
    whatever colour this ground happens to be, never grey */
 .cg-store-off { opacity: 0.62; }
 .cg-store-off::after { opacity: 0.3; }
+
+/* ---------------------------------------------------------------
+   The bar under the mark on a loading screen.
+
+   Travels rather than pulses: it crosses the track, leaves, and
+   comes back, which reads as work being done rather than as a
+   thing breathing. Held still for anybody who has asked their
+   system not to animate - a full-screen wait is exactly where
+   motion sickness is least welcome, and the mark and the word
+   underneath already say what is happening.
+   --------------------------------------------------------------- */
+@keyframes cg-loadbar {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+}
+
+.cg-loadbar {
+    animation: cg-loadbar 1.15s cubic-bezier(0.55, 0.15, 0.35, 0.9) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-loadbar {
+        animation: none;
+        width: 100%;
+        opacity: 0.55;
+    }
+}

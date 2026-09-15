@@ -108,7 +108,23 @@ export const AreaProvider = ({ children }) => {
                 setStatus("error");
                 setError("Location was not shared. Type your town or pincode instead.");
             },
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 }
+            /*
+             * High accuracy even though this is only an area.
+             *
+             * With it off the browser takes the cheapest answer it has, and on
+             * a laptop the cheapest answer is the IP address - which resolves
+             * to the internet provider's gateway, usually the state capital. A
+             * friend sitting in Sambalpur was shown Bhubaneswar on his laptop
+             * and the right town on his phone, and that is the whole
+             * explanation: the phone has GPS, the laptop has an IP address.
+             *
+             * On it, a laptop reads the wifi networks around it instead, which
+             * usually lands in the right town. It costs a second or two and a
+             * little battery, and this is asked once rather than watched, so
+             * that is a fair trade. A phone was always accurate and is
+             * unaffected.
+             */
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10 * 60 * 1000 }
         );
     }, [ask]);
 

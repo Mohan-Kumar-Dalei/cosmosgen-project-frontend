@@ -113,7 +113,18 @@ export const AreaForm = ({ onDone }) => {
             </div>
 
             <form onSubmit={submit} className="flex items-center gap-2">
-                <div className="flex-1 flex items-center gap-2 h-10 px-3 rounded-full border border-hairline-strong focus-within:border-accent transition-colors">
+                {/*
+                  * `min-w-0` on the box, not only on the input inside it.
+                  *
+                  * A flex item will not shrink below its own content unless it
+                  * is told it may, and the default is `min-width: auto`. The
+                  * input had that permission; the rounded box around it did
+                  * not - so the box held itself at the width of its icon plus
+                  * "Town or pincode", the row came out wider than the 300px
+                  * panel, and the Check button was pushed off the right edge
+                  * and clipped. It looked like the whole row had drifted left.
+                  */}
+                <div className="min-w-0 flex-1 flex items-center gap-2 h-10 px-3 rounded-full border border-hairline-strong focus-within:border-accent transition-colors">
                     <Search className="w-3.5 h-3.5 text-ink-faint shrink-0" />
                     <input
                         value={term}
@@ -125,7 +136,7 @@ export const AreaForm = ({ onDone }) => {
                 <button
                     type="submit"
                     disabled={busy || !term.trim()}
-                    className="h-10 px-4 rounded-full border border-hairline-strong text-[13px] font-semibold hover:bg-sunken disabled:opacity-50 transition-colors"
+                    className="shrink-0 h-10 px-4 rounded-full border border-hairline-strong text-[13px] font-semibold hover:bg-sunken disabled:opacity-50 transition-colors"
                 >
                     Check
                 </button>

@@ -1,16 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandLoader } from "../../ui/BrandLoader";
 import { api } from '../../services/api';
 import { User, MapPin, ArrowLeft, Trash2, Camera, Loader2, AlertCircle, Landmark, CheckCircle2 } from 'lucide-react';
+
+/** A fresh token, so Google bills a whole search as one session. */
+const newSession = () => (
+    typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : "s" + Date.now() + Math.random().toString(36).slice(2)
+);
 
 const TechnicianProfile = () => {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+
+    /*
+     * Whether the vendor's own details have arrived yet.
+     *
+     * Without this the form rendered immediately with every field empty, which
+     * is indistinguishable from an account that has no details saved - a
+     * vendor could read his own name as blank, start typing it again, and
+     * watch the server's copy land on top of what he had typed.
+     */
+    const [ready, setReady] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // States
     const [techProfile, setTechProfile] = useState({
-        name: '', phone: '', state: '', area: '', pincode: '', profileImage: ''
+        name: '', phone: '', state: '', city: '', area: '', pincode: '', profileImage: ''
     });
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -29,6 +47,24 @@ const TechnicianProfile = () => {
     const [isSearchingLoc, setIsSearchingLoc] = useState(false);
     const [osmTimeout, setOsmTimeout] = useState(null);
 
+    /*
+     * Localities inside the chosen town, as they are typed.
+     *
+     * Google answers, with the free post-office list behind it - the same
+     * arrangement the register form uses, and it must stay the same: a vendor
+     * correcting his area here should see exactly what he saw signing up.
+     *
+     * The session token groups a whole search into one charge from Google
+     * rather than one per keystroke.
+     */
+    const [areaFor, setAreaFor] = useState({ city: "", term: "", list: [] });
+    const areaSession = useRef(newSession());
+
+    const areaList = areaFor.city === String(techProfile.city || "")
+        && areaFor.term === String(techProfile.area || "")
+        ? areaFor.list
+        : [];
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -37,18 +73,62 @@ const TechnicianProfile = () => {
                     setTechProfile(res.data.data);
                 }
             } catch {
-                navigate('/technician/admin/login');
+                navigate('/vendor/admin/login');
+            } finally {
+                setReady(true);
             }
         };
         fetchProfile();
     }, [navigate]);
 
     useEffect(() => {
+        const city = String(techProfile.city || "").trim();
+        const term = String(techProfile.area || "").trim();
+
+        if (!city) return undefined;
+        if (areaFor.city === city && areaFor.term === term) return undefined;
+
+        let alive = true;
+        const wait = setTimeout(() => {
+            api.get("/map/areas", { params: { city, q: term, session: areaSession.current } })
+                .then((res) => { if (alive) setAreaFor({ city, term, list: res.data.data || [] }); })
+                .catch(() => { if (alive) setAreaFor({ city, term, list: [] }); });
+        }, 300);
+
+        return () => { alive = false; clearTimeout(wait); };
+    }, [techProfile.city, techProfile.area, areaFor.city, areaFor.term]);
+
+    // Locality and pincode travel together. A Google prediction needs one
+    // details lookup for its pincode - the call that also closes the session.
+    const handlePickArea = async (item) => {
+        setTechProfile(prev => ({ ...prev, area: item.name }));
+        setAreaFor(prev => ({ ...prev, term: item.name, list: [] }));
+
+        if (item.pincode) {
+            setTechProfile(prev => ({ ...prev, pincode: item.pincode }));
+            return;
+        }
+        if (!item.placeId) return;
+
+        try {
+            const res = await api.get("/map/place", {
+                params: { placeId: item.placeId, session: areaSession.current },
+            });
+            const found = res.data.data || {};
+            setTechProfile(prev => ({ ...prev, pincode: found.pincode || prev.pincode }));
+        } catch {
+            // The name stands; the pincode is typed
+        } finally {
+            areaSession.current = newSession();
+        }
+    };
+
+    useEffect(() => {
         if (techProfile?._id) {
             const currentPath = window.location.pathname;
-            if (currentPath.startsWith("/technician/admin") && !currentPath.includes(techProfile._id)) {
-                const suffix = currentPath.replace("/technician/admin", "");
-                navigate(`/technician/admin/${techProfile._id}${suffix}`, { replace: true });
+            if (currentPath.startsWith("/vendor/admin") && !currentPath.includes(techProfile._id)) {
+                const suffix = currentPath.replace("/vendor/admin", "");
+                navigate(`/vendor/admin/${techProfile._id}${suffix}`, { replace: true });
             }
         }
     }, [techProfile, navigate]);
@@ -92,43 +172,70 @@ const TechnicianProfile = () => {
         }
     };
 
-    // 🌍 Smart Area Input Handler
-    const handleAreaChange = (e) => {
+    // The town, from Google, restricted to places that are actually towns -
+    // the same as the register form, with the bundled list behind it
+    const handleCityChange = (e) => {
         const val = e.target.value;
-        setTechProfile(prev => ({ ...prev, area: val }));
+        setTechProfile(prev => ({ ...prev, city: val }));
 
-        if (val.trim().length >= 3) {
-            setIsSearchingLoc(true);
-            if (osmTimeout) clearTimeout(osmTimeout);
+        if (osmTimeout) clearTimeout(osmTimeout);
 
-            const timeoutId = setTimeout(async () => {
-                try {
-                    const res = await api.get(`/map/search?q=${encodeURIComponent(val)}`);
-                    setSuggestions(res.data.data);
-                    setShowSuggestions(true);
-                } catch (error) {
-                    console.error("OSM Fetch Error:", error);
-                } finally {
-                    setIsSearchingLoc(false);
-                }
-            }, 600);
-            setOsmTimeout(timeoutId);
-        } else {
+        if (!val.trim()) {
             setSuggestions([]);
             setShowSuggestions(false);
+            return;
         }
+
+        setIsSearchingLoc(true);
+        const timeoutId = setTimeout(async () => {
+            try {
+                const res = await api.get("/map/cities", {
+                    params: { q: val, session: areaSession.current },
+                });
+                setSuggestions(res.data.data || []);
+                setShowSuggestions(true);
+            } catch {
+                setSuggestions([]);
+            } finally {
+                setIsSearchingLoc(false);
+            }
+        }, 300);
+        setOsmTimeout(timeoutId);
     };
 
-    // Auto-fill Action
-
-    const handleSelectLocation = (place) => {
-        setTechProfile(prev => ({ 
-            ...prev, 
-            state: place.state || '', 
-            area: place.area || place.label || '', 
-            pincode: place.pincode || '' 
-        }));
+    // A Google prediction needs one details lookup for its state and pincode;
+    // a bundled row already knows both. The area is cleared either way - a
+    // town changed with an old neighbourhood under it files somebody wrongly.
+    const handleSelectCity = async (town) => {
         setShowSuggestions(false);
+        setSuggestions([]);
+        setTechProfile(prev => ({ ...prev, city: town.city, area: '' }));
+
+        if (town.state) {
+            setTechProfile(prev => ({
+                ...prev,
+                state: town.state,
+                pincode: String(prev.pincode || '').trim() || town.pincode || '',
+            }));
+            return;
+        }
+        if (!town.placeId) return;
+
+        try {
+            const res = await api.get("/map/place", {
+                params: { placeId: town.placeId, session: areaSession.current },
+            });
+            const found = res.data.data || {};
+            setTechProfile(prev => ({
+                ...prev,
+                state: found.state || prev.state,
+                pincode: String(prev.pincode || '').trim() || found.pincode || '',
+            }));
+        } catch {
+            // The name stands
+        } finally {
+            areaSession.current = newSession();
+        }
     };
 
     const handleUpdate = async (e) => {
@@ -150,7 +257,8 @@ const TechnicianProfile = () => {
         formData.append('name', techProfile.name);
         formData.append('phone', techProfile.phone);
         formData.append('state', techProfile.state);
-        formData.append('area', techProfile.area);
+        formData.append('city', techProfile.city);
+        formData.append('area', techProfile.area || '');
         formData.append('pincode', techProfile.pincode);
         
         if (!techProfile.bankDetails || !techProfile.bankDetails.accountLast4) {
@@ -169,7 +277,7 @@ const TechnicianProfile = () => {
             });
             if (res.data.success) {
                 alert("Profile updated successfully!");
-                navigate('/technician/admin');
+                navigate('/vendor/admin');
             }
         } catch (error) {
             alert(error.response?.data?.message || "Failed to update profile");
@@ -186,12 +294,16 @@ const TechnicianProfile = () => {
         try {
             await api.delete('/technician/profile/delete');
             document.cookie = "techToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            navigate('/technician/admin/login');
+            navigate('/vendor/admin/login');
         } catch {
             alert("Failed to delete account");
             setIsDeleting(false);
         }
     };
+
+    // Nothing of his own is on screen yet, so this is the one case that earns a
+    // whole screen of waiting rather than a busy button
+    if (!ready) return <BrandLoader label="Loading your profile" />;
 
     return (
         <div className="min-h-screen flex flex-col font-sans bg-white selection:bg-brand-tint selection:text-green-900">
@@ -208,7 +320,7 @@ const TechnicianProfile = () => {
                     </div>
                 </div>
                 <button 
-                    onClick={() => navigate('/technician/admin')} 
+                    onClick={() => navigate('/vendor/admin')} 
                     className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-sunken text-ink hover:bg-sunken transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" /> Back
@@ -271,35 +383,78 @@ const TechnicianProfile = () => {
                             />
                         </div>
 
-                        {/* Smart Area Field */}
                         <div className="relative space-y-1.5 z-50">
-                            <label className="cg-label block mb-2">Area / City (Search to Auto-fill)</label>
+                            <label className="cg-label block mb-2">Your town or city</label>
                             <div className="relative">
                                 <MapPin className="w-4 h-4 text-ink-faint absolute left-3.5 top-3" />
                                 <input
                                     type="text"
-                                    name="area"
+                                    name="city"
                                     required
                                     autoComplete="off"
-                                    placeholder="Type area to fetch..."
-                                    value={techProfile.area}
-                                    onChange={handleAreaChange}
+                                    placeholder="Start typing - e.g. Bhubaneswar"
+                                    value={techProfile.city || ''}
+                                    onChange={handleCityChange}
                                     className="cg-input pl-10 pr-10 font-medium"
                                 />
                                 {isSearchingLoc && <Loader2 className="w-4 h-4 text-brand animate-spin absolute right-3.5 top-3" />}
                             </div>
 
                             {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute w-full mt-1 cg-card shadow-lg max-h-56 overflow-y-auto z-50 divide-y divide-gray-100">
-                                    {suggestions.map((place) => (
-                                        <div key={place.place_id} onClick={() => handleSelectLocation(place)} className="p-3 hover:bg-brand-tint cursor-pointer flex gap-3 items-start transition-colors">
+                                <div className="absolute w-full mt-1 cg-card shadow-lg max-h-56 overflow-y-auto z-50 divide-y divide-hairline">
+                                    {suggestions.map((town) => (
+                                        <div key={town.placeId || town.city} onClick={() => handleSelectCity(town)} className="p-3 hover:bg-brand-tint cursor-pointer flex gap-3 items-start transition-colors">
                                             <MapPin className="w-4 h-4 text-brand shrink-0 mt-0.5" />
-                                            <span className="text-sm font-medium text-ink leading-tight">{place.label}</span>
+                                            <div>
+                                                <p className="text-sm font-medium text-ink leading-tight">{town.city}</p>
+                                                <p className="text-xs text-ink-soft mt-0.5">{town.detail || [town.state, town.pincode].filter(Boolean).join(" · ")}</p>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
+
+                        {/* The rest of it in his own words - what the office
+                            reads out when somebody has to find him */}
+                        {/* Which part of that town - offered from the
+                            pincode via India Post, free, and still typable for
+                            a corner the directory does not list */}
+                        <div className="space-y-1.5">
+                            <label className="cg-label block mb-2">Your area</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    name="area"
+                                    value={techProfile.area || ''}
+                                    onChange={handleChange}
+                                    autoComplete="off"
+                                    placeholder="Start typing - e.g. Palasuni"
+                                    className="cg-input font-medium"
+                                />
+                                {areaList.length > 0 && (
+                                    <ul className="absolute z-40 w-full mt-1 cg-card shadow-lg max-h-56 overflow-y-auto">
+                                        {areaList.map((a) => (
+                                            <li
+                                                key={a.placeId || a.name}
+                                                onClick={() => handlePickArea(a)}
+                                                className="p-3 hover:bg-brand-tint cursor-pointer flex gap-3 items-start transition-colors"
+                                            >
+                                                <MapPin className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-ink truncate">{a.name}</p>
+                                                    {(a.detail || a.pincode) && (
+                                                        <p className="text-xs text-ink-soft mt-0.5 truncate">{a.detail || a.pincode}</p>
+                                                    )}
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+
+
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">

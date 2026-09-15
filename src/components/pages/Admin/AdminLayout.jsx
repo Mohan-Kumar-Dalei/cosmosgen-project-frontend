@@ -128,7 +128,7 @@ const AdminLayout = ({ children }) => {
             refreshCounts();
             notifyNew(
                 "New vendor application",
-                (p?.name || "Someone") + (p?.area ? ", " + p.area : ""),
+                (p?.name || "Someone") + (p?.city ? ", " + p.city : ""),
                 { panel: "Backoffice", tab: "Vendor applications", onOpen: goTechnicians }
             );
         };

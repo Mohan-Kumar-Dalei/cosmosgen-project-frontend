@@ -26,8 +26,8 @@ api.interceptors.response.use(
             "/admin/login",
             "/admin/register",
             "/owner/login",
-            "/technician/admin/login",
-            "/technician/admin/register",
+            "/vendor/admin/login",
+            "/vendor/admin/register",
         ];
         const isPublicPage = publicPages.includes(path);
 
@@ -38,8 +38,21 @@ api.interceptors.response.use(
         if (status === 401 && !isAuthCall && !isPublicPage) {
             if (path.startsWith("/admin")) {
                 window.location.href = "/admin/login";
-            } else if (path.startsWith("/technician")) {
-                window.location.href = "/technician/admin/login";
+            } else if (path.startsWith("/vendor") || path.startsWith("/technician")) {
+                /*
+                 * Both spellings, and the old one is not dead weight.
+                 *
+                 * The panel moved from /technician/admin to /vendor/admin, and
+                 * this check was missed in the rename - it tested the prefix
+                 * without "/admin" on it, so nothing matched the new address
+                 * and a signed-out vendor sat on the panel collecting 401s
+                 * instead of being shown the login page.
+                 *
+                 * /technician stays because the old routes still answer, for
+                 * links already out in the world; somebody who lands there
+                 * with no session should be sent on rather than stranded.
+                 */
+                window.location.href = "/vendor/admin/login";
             }
         }
 

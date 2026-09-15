@@ -31,7 +31,7 @@ const TechnicianLogin = () => {
         try {
             const res = await api.post('/technician/login', credentials);
             if (res.data.success) {
-                navigate('/technician/admin');
+                navigate('/vendor/admin');
             }
         } catch (error) {
             const data = error.response?.data;
@@ -192,7 +192,7 @@ const TechnicianLogin = () => {
 
                     <p className="text-center text-sm text-ink-soft mt-8 pt-8 border-t border-hairline">
                         New here?{" "}
-                        <Link to="/technician/admin/register" className="text-accent font-semibold hover:text-accent-deep">
+                        <Link to="/vendor/admin/register" className="text-accent font-semibold hover:text-accent-deep">
                             Join as a vendor
                         </Link>
                     </p>

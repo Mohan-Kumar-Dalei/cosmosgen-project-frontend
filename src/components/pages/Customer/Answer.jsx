@@ -16,28 +16,56 @@ import { useEffect, useState } from "react";
  */
 
 /**
- * One character at a time, out of a blur.
+ * One word at a time, written out rather than dropped in.
  *
  * The whole bubble used to resolve as a single blurred block, which reads as
- * one thing appearing rather than as an answer being written. Each letter now
- * carries its own delay.
+ * one thing appearing rather than as an answer being written. So each piece
+ * carries its own delay - but a *word* at a time, not a letter.
+ *
+ * Letters were the first attempt and they were too expensive to keep. A four
+ * hundred character reply is four hundred elements, each running its own
+ * animation, and the animation included a blur - which forces the browser to
+ * re-render that element's pixels on every frame instead of just moving a
+ * finished layer around. Four hundred of those at once is what made a phone
+ * stutter for the first second of every answer.
+ *
+ * The same reply is about seventy words. Six times fewer elements, and what
+ * they animate now is opacity and a two pixel lift, both of which the
+ * compositor does without touching the text again. At reading distance the
+ * difference between letters appearing and words appearing is barely there;
+ * the difference in cost is the whole of it.
  *
  * `step` is worked out from the length of the reply and handed down, so the
  * reveal always finishes in about a second: a short answer trips along at a
  * readable pace and a long one simply moves faster, rather than making
  * somebody who has already waited for a model wait for an animation too.
  */
-const Reveal = ({ text, from, step }) => (
-    Array.from(String(text)).map((char, i) => (
-        <span
-            key={i}
-            className="cg-char"
-            style={{ "--d": Math.round((from + i) * step) + "ms" }}
-        >
-            {char}
-        </span>
-    ))
-);
+const Reveal = ({ text, from, step }) => {
+    // Split on whitespace but keep it, so the spacing of the original survives
+    const parts = String(text).split(/(\s+)/);
+    let word = 0;
+
+    return parts.map((part, i) => {
+        // Whitespace is not a thing that arrives; it is the gap between things
+        if (!part || /^\s+$/.test(part)) return part;
+
+        const at = from + word;
+        word += 1;
+
+        return (
+            <span
+                key={i}
+                className="cg-char"
+                style={{ "--d": Math.round(at * step) + "ms" }}
+            >
+                {part}
+            </span>
+        );
+    });
+};
+
+/** How many words are in a run of text - the unit the reveal counts in. */
+const wordsIn = (text) => (String(text).trim() ? String(text).trim().split(/\s+/).length : 0);
 
 /** `**like this**` becomes bold, and nothing else is interpreted. */
 const withEmphasis = (text, cursor, step, revealing) =>
@@ -46,7 +74,7 @@ const withEmphasis = (text, cursor, step, revealing) =>
         const body = bold ? part.slice(2, -2) : part;
         const at = cursor.n;
 
-        cursor.n += body.length;
+        cursor.n += wordsIn(body);
 
         if (!revealing) {
             return bold
@@ -116,8 +144,12 @@ export const Answer = ({ text }) => {
      * once while the markup is built.
      */
     const cursor = { n: 0 };
-    const total = String(text).length || 1;
-    const step = Math.max(3, Math.min(14, 900 / total));
+    const total = wordsIn(text) || 1;
+
+    // Still about a second end to end, now measured in words: a one-line reply
+    // lands at a readable pace and a long one speeds up rather than making
+    // somebody wait through it
+    const step = Math.max(12, Math.min(70, 900 / total));
 
     return (
         <div className="flex flex-col gap-3">

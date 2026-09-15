@@ -18,13 +18,28 @@ const SERVICE_OPTIONS = [
 const STEPS = [
     { key: 1, label: "Phone" },
     { key: 2, label: "Personal" },
-    { key: 3, label: "Work & Location" },
-    { key: 4, label: "Bank" },
+    { key: 3, label: "Your work" },
+    { key: 4, label: "Location" },
+    { key: 5, label: "Bank" },
 ];
 
 import SplitCurve from "../../ui/SplitCurve";
 
 const LOGO = "https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?updatedAt=1788413075959";
+
+/**
+ * A fresh token for one autocomplete session.
+ *
+ * Google groups every keystroke and the one details lookup that follows into
+ * a single billed session, but only when they all carry the same token. Any
+ * unique string does; `crypto.randomUUID` where it exists, and a timestamp
+ * with some randomness where it does not.
+ */
+const newSession = () => (
+    typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : "s" + Date.now() + Math.random().toString(36).slice(2)
+);
 
 const TechnicianRegister = () => {
     const navigate = useNavigate();
@@ -54,6 +69,7 @@ const TechnicianRegister = () => {
         password: "",
         email: "",
         state: "Odisha",
+        city: "",
         area: "",
         pincode: "",
         skills: [],
@@ -84,6 +100,40 @@ const TechnicianRegister = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isSearchingLoc, setIsSearchingLoc] = useState(false);
     const [osmTimeout, setOsmTimeout] = useState(null);
+
+    /*
+     * The suggestions, and the town and search they belong to.
+     *
+     * Kept together rather than as a bare list, so a set fetched for one town
+     * or one half-typed word can never be shown against another - and so
+     * nothing has to be cleared, which is what kept dragging a synchronous
+     * setState into the effect below.
+     */
+    const [areaFor, setAreaFor] = useState({ city: "", term: "", list: [] });
+
+    /*
+     * One billing session per search.
+     *
+     * Google charges autocomplete by the request unless every keystroke and
+     * the final details lookup carry the same session token - then the whole
+     * episode is one charge. A ref rather than state: changing it must not
+     * re-render anything, and it is replaced the moment a locality is picked.
+     */
+    const areaSession = useRef(newSession());
+
+    /*
+     * Both of these are worked out while rendering rather than stored.
+     *
+     * "Still loading" is exactly "what we hold is for a different search" -
+     * there is nothing a second piece of state could know that this does not,
+     * and keeping one meant setting it inside the effect, which is the
+     * cascading render React warns about.
+     */
+    const areaList = areaFor.city === form.city && areaFor.term === form.area
+        ? areaFor.list
+        : [];
+    const loadingAreas = Boolean(form.city.trim())
+        && (areaFor.city !== form.city || areaFor.term !== form.area);
 
     const ifscTimer = useRef(null);
 
@@ -137,7 +187,7 @@ const TechnicianRegister = () => {
             setError(getErrorMessage(err, "Could not verify that number"));
 
             if (err.response?.data?.alreadyRegistered) {
-                setTimeout(() => navigate("/technician/admin/login"), 2500);
+                setTimeout(() => navigate("/vendor/admin/login"), 2500);
             }
         } finally {
             setBusy(false);
@@ -146,39 +196,168 @@ const TechnicianRegister = () => {
 
     /* ---------------- FORMS & LOCATION ---------------- */
 
-    const handleAreaChange = (e) => {
+    /*
+     * The town, from Google, restricted to places that are actually towns.
+     *
+     * One provider for every suggestion on this form, which is what the office
+     * asked for: a vendor typing a town and a vendor typing his locality
+     * should get the same kind of answer. The server falls back to the
+     * company's own bundled list when there is no key or Google is down.
+     *
+     * The session token groups the whole search and the details lookup that
+     * follows into a single charge instead of one per keystroke - and it is
+     * the same token the locality search below uses, because a vendor filling
+     * in where he works is one episode as far as the billing goes.
+     */
+    const handleCityChange = (e) => {
         const val = e.target.value;
-        setForm(prev => ({ ...prev, area: val }));
-        if (val.trim().length >= 3) {
-            setIsSearchingLoc(true);
-            if (osmTimeout) clearTimeout(osmTimeout);
-            const timeoutId = setTimeout(async () => {
-                try {
-                    const res = await api.get(`/map/search?q=${encodeURIComponent(val)}`);
-                    setSuggestions(res.data.data);
-                    setShowSuggestions(true);
-                } catch (error) {
-                    console.error('OSM Fetch Error:', error);
-                } finally {
-                    setIsSearchingLoc(false);
-                }
-            }, 600);
-            setOsmTimeout(timeoutId);
-        } else {
+        setForm(prev => ({ ...prev, city: val }));
+
+        if (osmTimeout) clearTimeout(osmTimeout);
+
+        if (!val.trim()) {
             setSuggestions([]);
             setShowSuggestions(false);
+            return;
+        }
+
+        setIsSearchingLoc(true);
+        const timeoutId = setTimeout(async () => {
+            try {
+                const res = await api.get("/map/cities", {
+                    params: { q: val, session: areaSession.current },
+                });
+                setSuggestions(res.data.data || []);
+                setShowSuggestions(true);
+            } catch {
+                setSuggestions([]);
+            } finally {
+                setIsSearchingLoc(false);
+            }
+        }, 300);
+        setOsmTimeout(timeoutId);
+    };
+
+    /*
+     * Picking a town settles the state, and the pincode if it is still blank.
+     *
+     * A Google prediction carries only a place id, so the rest costs one more
+     * lookup - the call that also closes the billing session. The bundled
+     * fallback already knows its own state and pincode and costs nothing.
+     *
+     * The locality below is cleared either way: a town changed and an old
+     * neighbourhood left sitting under it is how a vendor ends up filed in
+     * Rasulgarh, Sambalpur.
+     */
+    const handleSelectCity = async (town) => {
+        setShowSuggestions(false);
+        setSuggestions([]);
+        setForm(prev => ({ ...prev, city: town.city, area: "" }));
+
+        if (town.state) {
+            setForm(prev => ({
+                ...prev,
+                state: town.state,
+                pincode: prev.pincode.trim() || town.pincode || "",
+            }));
+            return;
+        }
+
+        if (!town.placeId) return;
+
+        try {
+            const res = await api.get("/map/place", {
+                params: { placeId: town.placeId, session: areaSession.current },
+            });
+            const found = res.data.data || {};
+
+            setForm(prev => ({
+                ...prev,
+                state: found.state || prev.state,
+                pincode: prev.pincode.trim() || found.pincode || "",
+            }));
+            if (found.lat != null) setCoords({ lat: found.lat, lon: found.lon });
+        } catch {
+            // The name stands; the state and pincode are typed
+        } finally {
+            areaSession.current = newSession();
         }
     };
 
-    const handleSelectLocation = (place) => {
-        setForm(prev => ({ 
-            ...prev, 
-            state: place.state || '', 
-            area: place.area || place.label || '', 
-            pincode: place.pincode || '' 
-        }));
-        setCoords({ lat: place.lat, lon: place.lon });
-        setShowSuggestions(false);
+    /*
+     * Localities inside the chosen town, as the vendor types.
+     *
+     * Google answers this, which the office chose knowingly: India Post's
+     * directory is free but lists post offices, and half of what people
+     * actually call their neighbourhood - Palasuni, Jagamara - has no post
+     * office of its own and so does not exist in it. The server still falls
+     * back to that free list when Google has nothing or is unreachable.
+     *
+     * The session token is what keeps this affordable. Minted once when the
+     * field is first used and carried through every keystroke and the final
+     * details lookup, Google bills the whole episode as a single session
+     * rather than one charge per letter. It is thrown away the moment a
+     * locality is picked, so the next search starts a new one.
+     */
+    useEffect(() => {
+        const city = String(form.city || "").trim();
+        const term = String(form.area || "").trim();
+
+        if (!city) return undefined;
+        if (areaFor.city === city && areaFor.term === term) return undefined;
+
+        let alive = true;
+        const wait = setTimeout(() => {
+            api.get("/map/areas", { params: { city, q: term, session: areaSession.current } })
+                .then((res) => {
+                    if (alive) setAreaFor({ city, term, list: res.data.data || [] });
+                })
+                .catch(() => {
+                    if (alive) setAreaFor({ city, term, list: [] });
+                });
+        }, 300);
+
+        return () => { alive = false; clearTimeout(wait); };
+    }, [form.city, form.area, areaFor.city, areaFor.term]);
+
+    /*
+     * Picking a locality settles the pincode with it.
+     *
+     * A Google prediction carries only a place id, so its pincode costs one
+     * more lookup - the call that also closes the billing session. A row from
+     * the free list already knows its own pincode and costs nothing.
+     *
+     * Either way the pincode stays editable underneath, for the corner filed
+     * under a neighbour's number.
+     */
+    const handlePickArea = async (item) => {
+        setForm((prev) => ({ ...prev, area: item.name }));
+        setAreaFor((prev) => ({ ...prev, term: item.name, list: [] }));
+
+        if (item.pincode) {
+            setForm((prev) => ({ ...prev, pincode: item.pincode }));
+            return;
+        }
+
+        if (!item.placeId) return;
+
+        try {
+            const res = await api.get("/map/place", {
+                params: { placeId: item.placeId, session: areaSession.current },
+            });
+            const found = res.data.data || {};
+
+            setForm((prev) => ({ ...prev, pincode: found.pincode || prev.pincode }));
+
+            // The pin as a bonus: a vendor who never presses "use my location"
+            // still lands on the office's map, which is what dispatch runs on
+            if (found.lat != null) setCoords({ lat: found.lat, lon: found.lon });
+        } catch {
+            // The name stands; only the pincode is missing and it is typed
+        } finally {
+            // Session spent - the next search is a new one
+            areaSession.current = newSession();
+        }
     };
 
     const handleGpsLocation = () => {
@@ -193,10 +372,17 @@ const TechnicianRegister = () => {
                     const res = await api.get(`/map/rev-geocode?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
                     const result = res.data.data?.results?.[0];
                     if (result) {
+                        /*
+                         * The pin fills in the precise half and leaves the
+                         * town alone. The town is a choice from a list and
+                         * must stay one - a reverse geocode that answers
+                         * "Khordha" for somebody who works out of Jatni would
+                         * silently refile him. What the pin is genuinely
+                         * better at is the exact pincode and a street to
+                         * start the address from.
+                         */
                         setForm(prev => ({
                             ...prev,
-                            state: result.state || prev.state,
-                            area: result.locality || result.city || prev.area,
                             pincode: result.pincode || prev.pincode,
                         }));
                         setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
@@ -246,18 +432,35 @@ const TechnicianRegister = () => {
         setStep(3);
     };
 
-    const workComplete = form.area.trim() && form.pincode.trim() && form.state.trim() && form.skills.length > 0;
+    // What he does, and where he does it, are two separate answers now - so
+    // each step only knows whether its own is finished
+    const workComplete = form.skills.length > 0;
 
-    const goToBank = () => {
+    // Town and locality together are the whole answer. There is no street
+    // address to fill in any more: an engineer navigates to the pin, and the
+    // office rings the number - neither of them ever read a house number.
+    const locationComplete =
+        form.city.trim() && form.area.trim() && form.pincode.trim() && form.state.trim();
+
+    const goToLocation = () => {
         if (!workComplete) {
-            setError("Please fill in your location and select at least one skill.");
+            setError("Pick at least one kind of work you do.");
             return;
         }
         setError("");
         setStep(4);
     };
 
-    /* ---------------- PHASE 4: Bank ---------------- */
+    const goToBank = () => {
+        if (!locationComplete) {
+            setError("Pick your town and then your area.");
+            return;
+        }
+        setError("");
+        setStep(5);
+    };
+
+    /* ---------------- PHASE 5: Bank ---------------- */
 
     const handleBankChange = (e) => {
         const { name, value } = e.target;
@@ -313,6 +516,7 @@ const TechnicianRegister = () => {
             formData.append("password", form.password);
             if (form.email) formData.append("email", form.email);
             formData.append("state", form.state);
+            formData.append("city", form.city);
             formData.append("area", form.area);
             formData.append("pincode", form.pincode);
             formData.append("hasVehicle", form.hasVehicle);
@@ -366,7 +570,7 @@ const TechnicianRegister = () => {
                         your phone number once they approve it.
                     </p>
                     <Link
-                        to="/technician/admin/login"
+                        to="/vendor/admin/login"
                         className="cg-btn cg-btn-go block w-full py-3"
                     >
                         Go to sign in
@@ -653,10 +857,10 @@ const TechnicianRegister = () => {
 
                             <div className="mb-6 2xl:mb-8">
                                 <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-ink mb-2 tracking-tight">
-                                    Work & Location
+                                    Your work
                                 </h1>
                                 <p className="text-ink-soft text-sm 2xl:text-base">
-                                    Tell us what you do and where you can work.
+                                    Pick everything you take on. Jobs are offered to you by trade.
                                 </p>
                             </div>
 
@@ -679,91 +883,6 @@ const TechnicianRegister = () => {
                                 ))}
                             </div>
 
-                            <div className="mb-4 2xl:mb-6">
-                                <label className="cg-label block mb-2">Search Area / Location</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                                        <MapPin className="h-4 w-4 2xl:w-5 2xl:h-5 text-ink-faint" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={form.area}
-                                        onChange={handleAreaChange}
-                                        onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
-                                        placeholder="Type your area (e.g. Patia, Bhubaneswar)"
-                                        className="cg-input pl-9 pr-10 py-3 2xl:py-4 text-base 2xl:text-lg"
-                                    />
-                                    {isSearchingLoc && (
-                                        <div className="absolute inset-y-0 right-3 flex items-center">
-                                            <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin text-brand" />
-                                        </div>
-                                    )}
-
-                                    {showSuggestions && suggestions.length > 0 && (
-                                        <ul className="absolute z-50 w-full mt-1 cg-card shadow-lg max-h-60 overflow-auto">
-                                            {suggestions.map((place, idx) => (
-                                                <li
-                                                    key={idx}
-                                                    onClick={() => handleSelectLocation(place)}
-                                                    className="px-4 py-3 hover:bg-sunken cursor-pointer border-b border-hairline last:border-0 flex items-start gap-3"
-                                                >
-                                                    <MapPin className="w-4 h-4 2xl:w-5 2xl:h-5 text-ink-faint mt-1 shrink-0" />
-                                                    <div>
-                                                        <p className="text-sm 2xl:text-base font-medium text-ink">{place.label || place.area}</p>
-                                                        {(place.state || place.pincode) && (
-                                                            <p className="text-xs 2xl:text-sm text-ink-soft mt-0.5">
-                                                                {[place.state, place.pincode].filter(Boolean).join(', ')}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                                <div className="mt-2 text-right">
-                                    <button 
-                                        type="button" 
-                                        onClick={handleGpsLocation}
-                                        className="inline-flex items-center gap-1.5 text-xs 2xl:text-sm font-medium text-brand hover:text-brand transition-colors"
-                                    >
-                                        {locationStatus === 'requesting' ? (
-                                            <Loader2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 animate-spin" />
-                                        ) : locationStatus === 'granted' ? (
-                                            <CheckCircle2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
-                                        ) : (
-                                            <Navigation className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
-                                        )}
-                                        {locationStatus === 'granted' ? 'Location Detected' : 'Detect my location (GPS)'}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 mb-4 2xl:mb-6">
-                                <div>
-                                    <label className="cg-label block mb-2">State</label>
-                                    <input
-                                        type="text"
-                                        name="state"
-                                        value={form.state}
-                                        onChange={handleFormChange}
-                                        className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg bg-sunken"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="cg-label block mb-2">Pincode</label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        name="pincode"
-                                        value={form.pincode}
-                                        onChange={handleFormChange}
-                                        placeholder="751024"
-                                        className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg bg-sunken"
-                                    />
-                                </div>
-                            </div>
-
                             <label className="flex items-center gap-2.5 2xl:gap-3 p-3.5 2xl:p-4 rounded-xl border border-hairline cursor-pointer mb-6 2xl:mb-8 hover:bg-sunken transition-colors">
                                 <input
                                     type="checkbox"
@@ -777,8 +896,211 @@ const TechnicianRegister = () => {
                             </label>
 
                             <button
-                                onClick={goToBank}
+                                onClick={goToLocation}
                                 disabled={!workComplete}
+                                className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base"
+                            >
+                                Continue to location
+                                <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
+                            </button>
+                        </>
+                    )}
+
+                    {/* ============ PHASE 4: Location ============
+                        Its own step, because it was not one question but five,
+                        and stacked under the trades it made a page somebody
+                        had to scroll twice to reach the end of. What he does
+                        and where he does it are two different answers. */}
+                    {step === 4 && (
+                        <>
+                            <button
+                                onClick={() => { setStep(3); setError(""); }}
+                                className="flex items-center gap-1.5 text-sm 2xl:text-base text-ink-soft hover:text-ink font-medium mb-4 2xl:mb-6 transition-colors"
+                            >
+                                <ArrowLeft className="w-4 h-4 2xl:w-5 2xl:h-5" />
+                                Back to your work
+                            </button>
+
+                            <div className="mb-6 2xl:mb-8">
+                                <h1 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-ink mb-2 tracking-tight">
+                                    Where you work
+                                </h1>
+                                <p className="text-ink-soft text-sm 2xl:text-base">
+                                    Jobs near you reach you first, so put down where you actually are.
+                                </p>
+                            </div>
+
+                            {/* The town, then the rest of the address.
+                                Two questions instead of one, because the office
+                                uses them for different things: the town files
+                                him, the address is what somebody reads out when
+                                a pin lands a few streets off. */}
+                            <div className="mb-4 2xl:mb-6">
+                                <label className="cg-label block mb-2">Your town or city</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                        <MapPin className="h-4 w-4 2xl:w-5 2xl:h-5 text-ink-faint" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={form.city}
+                                        onChange={handleCityChange}
+                                        onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                                        placeholder="Start typing - e.g. Bhubaneswar"
+                                        autoComplete="off"
+                                        className="cg-input pl-9 pr-10 py-3 2xl:py-4 text-base 2xl:text-lg"
+                                    />
+                                    {isSearchingLoc && (
+                                        <div className="absolute inset-y-0 right-3 flex items-center">
+                                            <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin text-brand" />
+                                        </div>
+                                    )}
+
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <ul className="absolute z-50 w-full mt-1 cg-card shadow-lg max-h-60 overflow-auto">
+                                            {suggestions.map((town) => (
+                                                <li
+                                                    key={town.placeId || town.city}
+                                                    onClick={() => handleSelectCity(town)}
+                                                    className="px-4 py-3 hover:bg-sunken cursor-pointer border-b border-hairline last:border-0 flex items-start gap-3"
+                                                >
+                                                    <MapPin className="w-4 h-4 2xl:w-5 2xl:h-5 text-ink-faint mt-1 shrink-0" />
+                                                    <div>
+                                                        <p className="text-sm 2xl:text-base font-medium text-ink">{town.city}</p>
+                                                        <p className="text-xs 2xl:text-sm text-ink-soft mt-0.5">
+                                                            {town.detail || [town.state, town.pincode].filter(Boolean).join(" · ")}
+                                                        </p>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+
+                                {showSuggestions && !isSearchingLoc && form.city.trim() && suggestions.length === 0 && (
+                                    <p className="mt-2 text-xs 2xl:text-sm text-warn">
+                                        We do not work there yet. Try the nearest town we cover.
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Which part of that town.
+                                A real list under the field rather than the
+                                browser's own datalist, which hides everything
+                                but the name - and the second line here is what
+                                tells "Palasuni, Rasulgarh" apart from a
+                                "Palasuni" somewhere else entirely.
+
+                                Still an input: somebody whose corner nobody
+                                lists can write it and carry on. */}
+                            <div className="mb-4 2xl:mb-6">
+                                <label className="cg-label block mb-2">
+                                    Your area {form.city.trim() ? "" : "(pick a town first)"}
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                        <Navigation className="h-4 w-4 2xl:w-5 2xl:h-5 text-ink-faint" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="area"
+                                        value={form.area}
+                                        onChange={handleFormChange}
+                                        disabled={!form.city.trim()}
+                                        autoComplete="off"
+                                        placeholder={form.city.trim()
+                                            ? "Start typing - e.g. Palasuni"
+                                            : "Pick a town first"}
+                                        className="cg-input pl-9 pr-10 py-3 2xl:py-4 text-base 2xl:text-lg disabled:bg-sunken disabled:cursor-not-allowed"
+                                    />
+                                    {loadingAreas && form.area.trim() && (
+                                        <div className="absolute inset-y-0 right-3 flex items-center">
+                                            <Loader2 className="w-4 h-4 2xl:w-5 2xl:h-5 animate-spin text-brand" />
+                                        </div>
+                                    )}
+
+                                    {areaList.length > 0 && (
+                                        <ul className="absolute z-40 w-full mt-1 cg-card shadow-lg max-h-60 overflow-auto">
+                                            {areaList.map((a) => (
+                                                <li
+                                                    key={a.placeId || a.name}
+                                                    onClick={() => handlePickArea(a)}
+                                                    className="px-4 py-3 hover:bg-sunken cursor-pointer border-b border-hairline last:border-0 flex items-start gap-3"
+                                                >
+                                                    <Navigation className="w-4 h-4 2xl:w-5 2xl:h-5 text-ink-faint mt-1 shrink-0" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm 2xl:text-base font-medium text-ink truncate">{a.name}</p>
+                                                        {(a.detail || a.pincode) && (
+                                                            <p className="text-xs 2xl:text-sm text-ink-soft mt-0.5 truncate">
+                                                                {a.detail || a.pincode}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+
+                                <p className="mt-1.5 text-xs 2xl:text-sm text-ink-soft">
+                                    Pick yours and the pincode fills itself in. Not listed? Just type it.
+                                </p>
+                            </div>
+
+                            {/* State and pincode: both settled by what he has
+                                already told us. The pincode stays editable for
+                                the rare corner filed under a neighbour's
+                                number. */}
+                            <div className="mb-4 2xl:mb-6 grid grid-cols-2 gap-3 2xl:gap-4">
+                                <div>
+                                    <label className="cg-label block mb-2">State</label>
+                                    <input
+                                        type="text"
+                                        value={form.state}
+                                        readOnly
+                                        className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg bg-sunken text-ink-soft cursor-not-allowed"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="cg-label block mb-2">Pincode</label>
+                                    <input
+                                        type="text"
+                                        name="pincode"
+                                        inputMode="numeric"
+                                        maxLength={6}
+                                        value={form.pincode}
+                                        onChange={(e) => setForm(prev => ({
+                                            ...prev,
+                                            pincode: e.target.value.replace(/[^0-9]/g, "").slice(0, 6),
+                                        }))}
+                                        placeholder="751001"
+                                        className="cg-input py-3 2xl:py-4 text-base 2xl:text-lg"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mb-4 2xl:mb-6 text-right">
+                                <button
+                                    type="button"
+                                    onClick={handleGpsLocation}
+                                    className="inline-flex items-center gap-1.5 text-xs 2xl:text-sm font-medium text-brand hover:text-brand transition-colors"
+                                >
+                                    {locationStatus === 'requesting' ? (
+                                        <Loader2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 animate-spin" />
+                                    ) : locationStatus === 'granted' ? (
+                                        <CheckCircle2 className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                                    ) : (
+                                        <Navigation className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                                    )}
+                                    {locationStatus === 'granted'
+                                        ? 'Pin saved - jobs will find you'
+                                        : 'Use my location to fill the pincode'}
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={goToBank}
+                                disabled={!locationComplete}
                                 className="cg-btn cg-btn-primary w-full py-3 2xl:py-4 2xl:text-base"
                             >
                                 Continue to bank details
@@ -787,15 +1109,15 @@ const TechnicianRegister = () => {
                         </>
                     )}
 
-                    {/* ============ PHASE 4: Bank ============ */}
-                    {step === 4 && (
+                    {/* ============ PHASE 5: Bank ============ */}
+                    {step === 5 && (
                         <>
                             <button
-                                onClick={() => { setStep(3); setError(""); }}
+                                onClick={() => { setStep(4); setError(""); }}
                                 className="flex items-center gap-1.5 text-sm 2xl:text-base text-ink-soft hover:text-ink font-medium mb-4 2xl:mb-6 transition-colors"
                             >
                                 <ArrowLeft className="w-4 h-4 2xl:w-5 2xl:h-5" />
-                                Back to work & location
+                                Back to your location
                             </button>
 
                             <div className="mb-6 2xl:mb-8">
@@ -902,7 +1224,7 @@ const TechnicianRegister = () => {
                     {step === 1 && (
                         <p className="text-center text-sm 2xl:text-base text-ink-soft mt-6 2xl:mt-8">
                             Already have an account?{" "}
-                            <Link to="/technician/admin/login" className="text-accent font-semibold hover:text-accent-deep">
+                            <Link to="/vendor/admin/login" className="text-accent font-semibold hover:text-accent-deep">
                                 Sign in
                             </Link>
                         </p>

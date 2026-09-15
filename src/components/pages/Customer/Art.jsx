@@ -215,7 +215,25 @@ export const Art = ({
                     decoding="async"
                     onLoad={() => setState("ready")}
                     onError={missed}
-                    className={"relative w-full h-full transition-opacity duration-500 "
+                    /*
+                     * Laid over the frame, never inside its flow.
+                     *
+                     * This used to be `relative`, which put the picture in the
+                     * layout and let it decide how tall the frame was. Before
+                     * it arrived it was nothing, so the card collapsed to
+                     * whatever floor its own classes set - `min-h-[320px]` on
+                     * the wide ones - and the moment the drawing loaded the
+                     * card grew to the drawing's natural height and shoved
+                     * everything below it down the page.
+                     *
+                     * Absolute, the frame's height is settled entirely by its
+                     * own CSS - an aspect ratio, or a stated height - and is
+                     * the same before the picture, during it, and after. The
+                     * skeleton underneath is already absolute, so the two now
+                     * occupy exactly the same box and one fades into the
+                     * other without anything moving.
+                     */
+                    className={"absolute inset-0 w-full h-full transition-opacity duration-500 "
                         + (contain ? "object-contain object-bottom " : "object-cover ")
                         + (state === "ready" ? "opacity-100 " : "opacity-0 ")
                         + imgClassName}

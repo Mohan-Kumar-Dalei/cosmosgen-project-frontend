@@ -1,10 +1,11 @@
 import React, { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AdminProtectedRoute } from "../components/pages/Protected/ProtectedRoute";
 import { DeveloperRoute } from "../components/pages/Developer/DeveloperRoute";
 import { CustomerProvider } from "../components/pages/Customer/customerAuth";
 import { AreaProvider } from "../components/pages/Customer/area";
 import { CUSTOMER_ROUTES } from "./customerRoutes";
+import { BrandLoader } from "../components/ui/BrandLoader";
 
 /*
  * The public pages name their module through the map next door, so that the
@@ -36,16 +37,12 @@ const AdminServices = lazy(() => import("../components/pages/Admin/AdminServices
 const AdminControllers = lazy(() => import("../components/pages/Admin/AdminControllers"));
 const DeveloperLogin = lazy(() => import("../components/pages/Developer/DeveloperLogin"));
 const DeveloperKeys = lazy(() => import("../components/pages/Developer/DeveloperKeys"));
+const DeveloperMaps = lazy(() => import("../components/pages/Developer/DeveloperMaps"));
 const AdminTechnicians = lazy(() => import("../components/pages/Admin/AdminTechnicians"));
 const AdminStaff = lazy(() => import("../components/pages/Admin/AdminStaff"));
 const AdminAnalytics = lazy(() => import("../components/pages/Admin/AdminAnalytics"));
 
-const PageLoader = () => (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-canvas">
-        <div className="w-8 h-8 border-2 border-hairline-strong border-t-brand rounded-full animate-spin"></div>
-        <p className="mt-4 text-sm text-ink-faint">Loading Cosmosgen</p>
-    </div>
-);
+const PageLoader = () => <BrandLoader />;
 
 /**
  * Every route below is lazy, and Suspense only covers a chunk that is still
@@ -91,6 +88,13 @@ class RouteErrorBoundary extends React.Component {
         );
     }
 }
+
+/** Old address in, same page at the new address out. */
+const MovedToVendor = () => {
+    const { pathname, search, hash } = useLocation();
+    const moved = pathname.replace("/technician/admin", "/vendor/admin");
+    return <Navigate to={moved + search + hash} replace />;
+};
 
 const AppRouter = () => {
     return (
@@ -151,13 +155,24 @@ const AppRouter = () => {
                             has no account to sign in to. */}
                         <Route path="/track/:token" element={<CustomerTracking />} />
 
-                        {/* Technician */}
-                        <Route path="/technician/admin/register" element={<TechnicianRegister />} />
-                        <Route path="/technician/admin/login" element={<TechnicianLogin />} />
-                        <Route path="/technician/admin/profile" element={<TechnicianProfile />} />
-                        <Route path="/technician/admin/:id/profile" element={<TechnicianProfile />} />
-                        <Route path="/technician/admin" element={<TechnicianPanel />} />
-                        <Route path="/technician/admin/:id" element={<TechnicianPanel />} />
+                        {/* Vendor - "technician" to a customer, "vendor" in
+                            the office's own words, and the address now says so
+                            too. The old paths still answer, below. */}
+                        <Route path="/vendor/admin/register" element={<TechnicianRegister />} />
+                        <Route path="/vendor/admin/login" element={<TechnicianLogin />} />
+                        <Route path="/vendor/admin/profile" element={<TechnicianProfile />} />
+                        <Route path="/vendor/admin/:id/profile" element={<TechnicianProfile />} />
+                        <Route path="/vendor/admin" element={<TechnicianPanel />} />
+                        <Route path="/vendor/admin/:id" element={<TechnicianPanel />} />
+
+                        {/* Where the panel used to live.
+                            Links to it are already out in the world - in
+                            WhatsApp messages, in a vendor's bookmarks - and a
+                            renamed route that answers 404 loses those people
+                            rather than moving them. The rest of the address is
+                            carried across, so a bookmarked profile page lands
+                            on the profile page. */}
+                        <Route path="/technician/admin/*" element={<MovedToVendor />} />
 
                         {/* Admin (backoffice) */}
                         <Route path="/admin/register" element={<AdminRegister />} />
@@ -181,6 +196,7 @@ const AppRouter = () => {
                             nothing of the backoffice's chrome around it. */}
                         <Route path="/developer/login" element={<DeveloperLogin />} />
                         <Route path="/developer" element={<DeveloperRoute><DeveloperKeys /></DeveloperRoute>} />
+                        <Route path="/developer/maps" element={<DeveloperRoute><DeveloperMaps /></DeveloperRoute>} />
                         <Route path="/admin/:id/controllers" element={<AdminProtectedRoute><AdminControllers /></AdminProtectedRoute>} />
                         <Route path="/admin/:id/services" element={<AdminProtectedRoute requiredPermission="MANAGE_PRICING"><AdminServices /></AdminProtectedRoute>} />
                     

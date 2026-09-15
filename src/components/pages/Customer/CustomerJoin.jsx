@@ -96,7 +96,7 @@ const CustomerJoin = () => {
                 >
                     <div className="flex flex-wrap gap-3">
                         <Link
-                            to="/technician/admin/register"
+                            to="/vendor/admin/register"
                             className="group inline-flex items-center gap-2 h-12 px-6 rounded-full bg-accent text-white font-semibold text-[15px] hover:bg-accent-deep transition-colors"
                         >
                             Register as an engineer
@@ -225,14 +225,14 @@ const CustomerJoin = () => {
 
                         <div data-reveal className="flex flex-wrap gap-3 shrink-0">
                             <Link
-                                to="/technician/admin/register"
+                                to="/vendor/admin/register"
                                 className="group inline-flex items-center gap-2 h-12 px-6 rounded-full bg-white text-panel font-semibold text-[15px] hover:bg-white/90 transition-colors"
                             >
                                 Register
                                 <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                             </Link>
                             <Link
-                                to="/technician/admin/login"
+                                to="/vendor/admin/login"
                                 className="inline-flex items-center h-12 px-6 rounded-full border border-white/20 font-semibold text-[15px] hover:bg-white/10 transition-colors"
                             >
                                 Already registered

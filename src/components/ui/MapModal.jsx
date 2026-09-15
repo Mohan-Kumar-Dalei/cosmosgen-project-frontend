@@ -1,5 +1,5 @@
 import { X, Navigation, MapPin, Loader2 } from "lucide-react";
-import LocationMap from "./LocationMap";
+import EmbedMap from "./EmbedMap";
 import useAreaLookup from "./useAreaLookup";
 
 const buildPinUrl = (lat, lon) =>
@@ -17,7 +17,10 @@ const buildPinUrl = (lat, lon) =>
  * the record, because a WhatsApp booking arrives as a dropped pin with no
  * address text attached to it.
  */
-const MapModal = ({ open, onClose, title, subtitle, lat, lon, note, markerColor = "#2563eb" }) => {
+// `markerColor` used to be here. The embed draws its own pin, and a modal
+// that shows exactly one place had no use for a colour anyway - callers
+// still passing it are simply ignored.
+const MapModal = ({ open, onClose, title, subtitle, lat, lon, note }) => {
     const hasCoords = Number.isFinite(Number(lat)) && Number.isFinite(Number(lon));
 
     // Only asked for while the modal is open - no point spending a geocode on
@@ -87,10 +90,27 @@ const MapModal = ({ open, onClose, title, subtitle, lat, lon, note, markerColor 
                                 </div>
                             </div>
 
-                            <LocationMap
-                                markers={[{ lat: Number(lat), lon: Number(lon), color: markerColor, title }]}
-                                className="h-72 sm:h-96"
+                            {/*
+                              * An embed, not the JavaScript SDK.
+                              *
+                              * This modal only ever showed one pin and let the
+                              * admin look around it, and the SDK was charging
+                              * about $7 per thousand opens for the privilege
+                              * of drawing that pin ourselves. The Embed API
+                              * does the same looking around for nothing at
+                              * all, and puts its own marker on the place.
+                              *
+                              * What is lost is our own marker colour, which
+                              * was decoration rather than information here -
+                              * there is one pin and the heading already says
+                              * whose it is.
+                              */}
+                            <EmbedMap
+                                lat={lat}
+                                lon={lon}
                                 zoom={16}
+                                title={title || "Location"}
+                                className="h-72 sm:h-96"
                             />
 
                             {note && <p className="text-xs text-ink-soft mt-3">{note}</p>}

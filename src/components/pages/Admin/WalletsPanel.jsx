@@ -200,9 +200,9 @@ const WalletRow = ({ row, onOpen }) => {
                         <span className="flex items-center gap-0.5">
                             <Phone className="w-3 h-3" /> {row.phone}
                         </span>
-                        {row.area && (
+                        {row.city && (
                             <span className="flex items-center gap-0.5 truncate">
-                                <MapPin className="w-3 h-3 shrink-0" /> {row.area}
+                                <MapPin className="w-3 h-3 shrink-0" /> {row.city}
                             </span>
                         )}
                         {/* An older technician record can predate the field entirely,
