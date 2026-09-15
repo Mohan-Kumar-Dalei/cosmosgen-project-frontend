@@ -205,7 +205,7 @@ const RIDER_SVG = `
  * person is real and accounted for, and nothing about it suggests movement.
  * The ring is what reads as waiting.
  */
-const WAITING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+const waitingSvg = (ringR, ringOpacity) => `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
   <defs>
     <radialGradient id="wshell" cx="0.35" cy="0.3" r="0.8">
       <stop offset="0" stop-color="#ffffff"/>
@@ -219,7 +219,7 @@ const WAITING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="
     </linearGradient>
   </defs>
 
-  <circle cx="48" cy="48" r="34" fill="#0f78d0" opacity="0.13"/>
+  <circle cx="48" cy="48" r="${ringR}" fill="#0f78d0" opacity="${ringOpacity}"/>
   <circle cx="48" cy="48" r="25" fill="#ffffff"/>
   <circle cx="48" cy="48" r="25" fill="none" stroke="#0f78d0" stroke-width="2.2" opacity="0.55"/>
 
@@ -232,27 +232,29 @@ const WAITING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="
 
 const WAITING_SIZE = 44;
 
-const waitingIcon = (maps, size = WAITING_SIZE) => ({
-    url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(WAITING_SVG),
-    scaledSize: new maps.Size(size, size),
-    anchor: new maps.Point(size / 2, size / 2),
+const waitingIcon = (maps, ringR = 34, ringOpacity = 0.13) => ({
+    url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(waitingSvg(ringR, ringOpacity)),
+    scaledSize: new maps.Size(WAITING_SIZE, WAITING_SIZE),
+    anchor: new maps.Point(WAITING_SIZE / 2, WAITING_SIZE / 2),
 });
 
 /**
- * The waiting mark breathes.
+ * The ring pulses; the person inside it does not.
  *
  * A marker that never moves is hard to tell from a page that has stopped
  * working - and this one never moves on purpose, because standing still is its
- * entire meaning. A slow swell says the opposite: somebody is there, and this
- * is live.
+ * whole meaning. So the blue ring around him behaves the way a live dot does
+ * anywhere else: it swells outward and fades, over and over.
  *
- * Done by resizing the icon rather than animating the drawing. An SVG handed
- * to a marker as an image is rasterised once and its own animation never runs,
- * so the movement has to come from outside it. Twenty frames a second is
- * plenty for something this slow and costs nothing beside the map's own
- * redraws.
+ * Only the ring. Scaling the whole mark was the first attempt and it was
+ * wrong - the man himself grew and shrank, which reads as a zoom rather than
+ * as a signal. Now he sits still at his own size and the ring does the work.
+ *
+ * Redrawn from outside rather than animated inside. An SVG handed to a marker
+ * as an image is rasterised once and its own animation never runs, so each
+ * frame is a fresh drawing with a bigger, fainter ring.
  */
-const PULSE_MS = 1600;
+const PULSE_MS = 1800;
 
 const startPulse = (maps, marker) => {
     const began = Date.now();
@@ -260,10 +262,12 @@ const startPulse = (maps, marker) => {
     return setInterval(() => {
         const phase = ((Date.now() - began) % PULSE_MS) / PULSE_MS;
 
-        // A cosine, so it swells and settles instead of stepping between two
-        // sizes the way a linear loop would.
-        const swell = (1 - Math.cos(phase * 2 * Math.PI)) / 2;
-        marker.setIcon(waitingIcon(maps, WAITING_SIZE * (1 + swell * 0.16)));
+        // Out from the shell and gone by the edge of the box, fading as it
+        // travels - which is what makes it read as a signal leaving him.
+        const radius = 26 + phase * 20;
+        const opacity = 0.3 * (1 - phase);
+
+        marker.setIcon(waitingIcon(maps, radius, Number(opacity.toFixed(3))));
     }, 50);
 };
 
