@@ -39,6 +39,16 @@ const CustomerTracking = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [tick, setTick] = useState(0);
+
+    /*
+     * Whether the live channel is actually carrying anything.
+     *
+     * Not a detail for the screen - it decides whether this page has to go and
+     * fetch for itself. A socket that says "connected" and delivers nothing is
+     * the state this page was stuck in, so the flag follows the events rather
+     * than the intention.
+     */
+    const [live, setLive] = useState(false);
     const socketRef = useRef(null);
 
     const load = useCallback(async () => {
@@ -80,6 +90,12 @@ const CustomerTracking = () => {
             } : prev));
         };
 
+        const up = () => setLive(true);
+        const down = () => setLive(false);
+
+        s.on("connect", up);
+        s.on("disconnect", down);
+        s.on("connect_error", down);
         s.on("track:update", onUpdate);
         s.connect();
 
@@ -87,10 +103,35 @@ const CustomerTracking = () => {
 
         return () => {
             clearInterval(clock);
+            s.off("connect", up);
+            s.off("disconnect", down);
+            s.off("connect_error", down);
             s.off("track:update", onUpdate);
             s.disconnect();
+            setLive(false);
         };
     }, [token]);
+
+    /*
+     * The fallback, and only a fallback.
+     *
+     * Mohan's rule for this product is that a screen updates because something
+     * happened, not because a timer went off - so nothing here polls while the
+     * socket is up. But he also had to sit on this page pressing refresh, and
+     * a customer waiting at their door will not do that: they will decide the
+     * link is broken.
+     *
+     * So the page fetches for itself exactly when the live channel is down,
+     * and stops the moment it comes back. It also stops once the job is done,
+     * because there is nothing left to follow.
+     */
+    useEffect(() => {
+        if (live) return undefined;
+        if (!data || data.stage === "done") return undefined;
+
+        const id = setInterval(load, 20000);
+        return () => clearInterval(id);
+    }, [live, data, load]);
 
     const stageIndex = Math.max(0, STAGES.findIndex((s) => s.key === data?.stage));
 
@@ -102,7 +143,15 @@ const CustomerTracking = () => {
         // than rebuilt on each fix - a rebuilt marker blinks, and a live
         // tracker that blinks looks broken.
         list.push(data.technicianAt
-            ? { lat: data.technicianAt.lat, lon: data.technicianAt.lon, color: "#0f78d0", title: data.technician?.name || "Technician" }
+            ? {
+                lat: data.technicianAt.lat,
+                lon: data.technicianAt.lon,
+                color: "#0f78d0",
+                title: data.technician?.name || "Technician",
+
+                // The one marker that is moving, so the one that is a van
+                kind: "vehicle",
+            }
             : null);
 
         if (data.destination?.lat != null) {

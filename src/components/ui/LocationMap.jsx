@@ -64,6 +64,156 @@ const pinIcon = (maps, fill) => ({
     anchor: new maps.Point(12, 22),
 });
 
+
+/**
+ * The engineer on his bike, seen from above.
+ *
+ * A pin is right for a place and wrong for a person: two identical teardrops
+ * on a road say "here are two points", not "this one is coming to that one".
+ *
+ * From above, and that is the whole point. It was drawn from the side twice
+ * and both were wrong for the same reason Mohan gave: a map is looked down on,
+ * so a bike shown in profile is lying on its side on the road. What you see
+ * from up there is the helmet, the shoulders, the handlebar across, an arm out
+ * to each grip, and a little wheel showing front and back - which is what
+ * every ride-hailing app puts on its map, because it is what is true.
+ *
+ * The company's mark and name sit on the back of the shirt, which is where a
+ * uniform carries them and the only surface facing the camera. The blue is
+ * kept to the outer edge of the shoulders so that panel stays white and the
+ * lettering has something to sit on.
+ *
+ * The depth is ordinary drawing rather than a 3D library: a radial highlight
+ * on the crown of the helmet where light would land, gradients down the
+ * shoulders and the tank, steel on the mirrors, and a blurred ellipse offset
+ * on the road so the bike sits above the tarmac instead of printed on it.
+ *
+ * It points north. If a heading ever reaches this screen, rotating the whole
+ * marker by it is the one change that would make it read as travelling rather
+ * than as sliding.
+ *
+ * Kept identical to customer-app/src/Rider.js.
+ */
+const RIDER_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="132" viewBox="0 0 100 132">
+  <defs>
+    <radialGradient id="helm" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#f0f3f6"/>
+      <stop offset="1" stop-color="#bcc6cf"/>
+    </radialGradient>
+    <linearGradient id="shirt" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#cbd3da"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#4b9ee4"/>
+      <stop offset="0.5" stop-color="#0f78d0"/>
+      <stop offset="1" stop-color="#0a4f8c"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#39424a"/>
+      <stop offset="1" stop-color="#171b20"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#cdd4da"/>
+      <stop offset="1" stop-color="#7d868e"/>
+    </linearGradient>
+    <clipPath id="badge"><circle cx="50" cy="81" r="6"/></clipPath>
+    <filter id="soft" x="-40%" y="-20%" width="180%" height="140%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <ellipse cx="53" cy="72" rx="24" ry="42" fill="rgba(13,26,38,0.22)" filter="url(#soft)"/>
+
+  <!-- front wheel and the mudguard over it -->
+  <rect x="45.5" y="6" width="9" height="30" rx="4" fill="url(#dark)"/>
+  <path d="M43 22 C43 19 46 17 50 17 C54 17 57 19 57 22 L57 34 C57 36 54 37 50 37 C46 37 43 36 43 34 Z" fill="url(#blue)"/>
+  <path d="M46 21 C47 20 48 19.5 50 19.5 C52 19.5 53 20 54 21 C52 22 48 22 46 21 Z" fill="#a8d6f8" opacity="0.7"/>
+
+  <!-- handlebar, grips, mirrors -->
+  <rect x="18" y="39" width="64" height="6" rx="3" fill="url(#dark)"/>
+  <rect x="14" y="36" width="13" height="11" rx="5" fill="#1b2128"/>
+  <rect x="73" y="36" width="13" height="11" rx="5" fill="#1b2128"/>
+  <rect x="11" y="31" width="3" height="8" rx="1.5" fill="#39424a"/>
+  <rect x="86" y="31" width="3" height="8" rx="1.5" fill="#39424a"/>
+  <ellipse cx="12" cy="29" rx="6" ry="4" fill="url(#steel)"/>
+  <ellipse cx="88" cy="29" rx="6" ry="4" fill="url(#steel)"/>
+
+  <!-- a sliver of tank between the bars and the rider -->
+  <path d="M41 45 C41 43 45 42 50 42 C55 42 59 43 59 45 L59 57 L41 57 Z" fill="url(#blue)"/>
+
+  <!-- arms, thin, from the shoulders out to the grips -->
+  <path d="M36 70 C32 62 27 53 23 46 L29 42 C33 50 38 60 42 67 Z" fill="url(#shirt)"/>
+  <path d="M64 70 C68 62 73 53 77 46 L71 42 C67 50 62 60 58 67 Z" fill="url(#shirt)"/>
+  <path d="M21 41 C25 39 29 41 30 44 L24 48 C21 47 19 43 21 41 Z" fill="#2b3138"/>
+  <path d="M79 41 C75 39 71 41 70 44 L76 48 C79 47 81 43 79 41 Z" fill="#2b3138"/>
+
+  <!-- shoulders and back. The blue is kept to the outer edge so the middle
+       stays white - that is the panel a uniform carries its name on -->
+  <path d="M31 76 C31 67 40 62 50 62 C60 62 69 67 69 76 L69 94 C69 100 60 103 50 103 C40 103 31 100 31 94 Z" fill="url(#shirt)"/>
+  <path d="M31 76 C31 69 34 65 38 63 L38 88 C33 87 31 83 31 79 Z" fill="url(#blue)"/>
+  <path d="M69 76 C69 69 66 65 62 63 L62 88 C67 87 69 83 69 79 Z" fill="url(#blue)"/>
+
+  <!-- the company, on the back of the shirt where a uniform carries it -->
+  <g transform="translate(50 82.5) scale(0.76) translate(-50 -81)">
+  <g clip-path="url(#badge)">
+    <circle cx="50" cy="81" r="6" fill="#0f78d0"/>
+    <g stroke="#ffffff" stroke-width="0.9">
+      <line x1="42" y1="82" x2="50" y2="74"/>
+      <line x1="45" y1="86" x2="54" y2="77"/>
+      <line x1="49" y1="88" x2="57" y2="80"/>
+    </g>
+    <path d="M46 86 L52 80 L50.5 78.5 L54 77 L53 80.5 L51.5 79 L47.5 87 Z" fill="#17a03c"/>
+  </g>
+  <circle cx="50" cy="81" r="6" fill="none" stroke="rgba(13,26,38,0.12)" stroke-width="0.6"/>
+  </g>
+
+  <text x="50" y="92" text-anchor="middle"
+        font-family="Outfit, Segoe UI, Arial, sans-serif"
+        font-size="4.4" font-weight="700" letter-spacing="-0.08" fill="#123a5e">Cosmosgen</text>
+  <text x="50" y="96.4" text-anchor="middle"
+        font-family="Outfit, Segoe UI, Arial, sans-serif"
+        font-size="2.5" font-weight="600" letter-spacing="0.08" fill="#5c6a77">Engineers Pvt Ltd</text>
+
+  <!-- the helmet: white shell, one narrow stripe, a visor at the front edge -->
+  <circle cx="50" cy="64" r="15.5" fill="url(#helm)"/>
+  <path d="M45.5 49.5 C47 49 53 49 54.5 49.5 L54.5 78.5 C53 79 47 79 45.5 78.5 Z" fill="url(#blue)"/>
+  <path d="M37 59 C40 53 44 50 50 50 C56 50 60 53 63 59 C57 56 43 56 37 59 Z" fill="#2a343d"/>
+  <ellipse cx="44" cy="57" rx="3.5" ry="1.4" fill="#8d99a3" opacity="0.75"/>
+  <circle cx="50" cy="64" r="15.5" fill="none" stroke="rgba(13,26,38,0.10)" stroke-width="1"/>
+
+  <!-- the bag behind him -->
+  <rect x="32" y="102" width="36" height="22" rx="5" fill="url(#dark)"/>
+  <rect x="32" y="108" width="36" height="6" fill="#0f78d0"/>
+  <rect x="46" y="102" width="8" height="22" fill="#20262c" opacity="0.8"/>
+
+  <!-- rear wheel, just past the bag -->
+  <rect x="45" y="119" width="10" height="11" rx="4" fill="url(#dark)"/>
+</svg>`;
+
+const RIDER_W = 70;
+const RIDER_H = 92;
+
+const riderIcon = (maps) => ({
+    url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(RIDER_SVG),
+    scaledSize: new maps.Size(RIDER_W, RIDER_H),
+
+    /*
+     * Centred, near enough. A marker drawn from above sits on its position
+     * rather than pointing at it, so there is no tip to anchor; a touch past
+     * the middle, because the rider is the heavy half of the picture.
+     */
+    anchor: new maps.Point(RIDER_W * 0.5, RIDER_H * 0.55),
+});
+
+
+
+
+
+
+
 /**
  * Shown until Google answers.
  *
@@ -193,9 +343,16 @@ const LocationMap = ({
             }
             markerRefs.current[key] = new maps.Marker({
                 map, position,
-                icon: pinIcon(maps, m.color || "#2563eb"),
+
+                // A van for whoever is travelling, a pin for the place they
+                // are travelling to. Anything that does not say which gets
+                // the pin, so every other map in the panel is unchanged.
+                icon: m.kind === "vehicle" ? riderIcon(maps) : pinIcon(maps, m.color || "#2563eb"),
                 title: key,
-                zIndex: 2 + i,
+
+                // Above the destination pin, so the two never hide each other
+                // as the van arrives.
+                zIndex: m.kind === "vehicle" ? 50 : 2 + i,
             });
         });
 

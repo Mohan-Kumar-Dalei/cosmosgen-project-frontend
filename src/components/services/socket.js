@@ -114,7 +114,22 @@ export const createTrackSocket = (token) => {
     const s = io(SOCKET_URL, {
         withCredentials: false,
         autoConnect: false,
-        transports: ["websocket", "polling"],
+
+        /*
+         * Polling first, the same as every other socket in this file.
+         *
+         * This one was left on websocket-first when the rest were changed, and
+         * it is the one that matters most: the tracking link is opened from
+         * WhatsApp, on the site, which is served through Amplify. Amplify's
+         * rewrite completes the upgrade handshake - the browser sees a 101 and
+         * believes it has a socket - and then relays no frames at all. So the
+         * page sat there looking connected while the van never moved, which is
+         * why it had to be refreshed by hand over and over.
+         *
+         * Polling connects, delivers, and upgrades itself to a websocket if
+         * the path really does carry one.
+         */
+        transports: ["polling", "websocket"],
         auth: { role: "track", token },
     });
     s.on("connect_error", (err) => console.error("[SOCKET:track] connect_error:", err.message));
