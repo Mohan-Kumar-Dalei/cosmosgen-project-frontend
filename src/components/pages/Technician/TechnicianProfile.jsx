@@ -101,8 +101,10 @@ const TechnicianProfile = () => {
     // Locality and pincode travel together. A Google prediction needs one
     // details lookup for its pincode - the call that also closes the session.
     const handlePickArea = async (item) => {
-        setTechProfile(prev => ({ ...prev, area: item.name }));
-        setAreaFor(prev => ({ ...prev, term: item.name, list: [] }));
+        // The whole line, not just the name - see the register form
+        const value = item.full || item.name;
+        setTechProfile(prev => ({ ...prev, area: value }));
+        setAreaFor(prev => ({ ...prev, term: value, list: [] }));
 
         if (item.pincode) {
             setTechProfile(prev => ({ ...prev, pincode: item.pincode }));
@@ -421,7 +423,7 @@ const TechnicianProfile = () => {
                             pincode via India Post, free, and still typable for
                             a corner the directory does not list */}
                         <div className="space-y-1.5">
-                            <label className="cg-label block mb-2">Your area</label>
+                            <label className="cg-label block mb-2">Area / address</label>
                             <div className="relative">
                                 <input
                                     type="text"

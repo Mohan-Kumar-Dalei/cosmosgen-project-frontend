@@ -331,8 +331,18 @@ const TechnicianRegister = () => {
      * under a neighbour's number.
      */
     const handlePickArea = async (item) => {
-        setForm((prev) => ({ ...prev, area: item.name }));
-        setAreaFor((prev) => ({ ...prev, term: item.name, list: [] }));
+        /*
+         * The whole line goes in, not just the name.
+         *
+         * "Palasuni, Rasulgarh, Bhubaneswar, Odisha, India" is what the office
+         * reads when it has to find somebody, and the vendor has already said
+         * it by picking the suggestion. There used to be a street address
+         * field under this asking the same thing again; it came back empty
+         * every time, which is what a question nobody sees the point of does.
+         */
+        const value = item.full || item.name;
+        setForm((prev) => ({ ...prev, area: value }));
+        setAreaFor((prev) => ({ ...prev, term: value, list: [] }));
 
         if (item.pincode) {
             setForm((prev) => ({ ...prev, pincode: item.pincode }));
@@ -995,7 +1005,7 @@ const TechnicianRegister = () => {
                                 lists can write it and carry on. */}
                             <div className="mb-4 2xl:mb-6">
                                 <label className="cg-label block mb-2">
-                                    Your area {form.city.trim() ? "" : "(pick a town first)"}
+                                    Area / address {form.city.trim() ? "" : "(pick a town first)"}
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -1043,7 +1053,8 @@ const TechnicianRegister = () => {
                                 </div>
 
                                 <p className="mt-1.5 text-xs 2xl:text-sm text-ink-soft">
-                                    Pick yours and the pincode fills itself in. Not listed? Just type it.
+                                    Pick yours and the full address and pincode fill themselves in.
+                                    Not listed? Just type it.
                                 </p>
                             </div>
 

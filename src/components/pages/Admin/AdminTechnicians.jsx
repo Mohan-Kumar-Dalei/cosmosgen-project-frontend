@@ -5,12 +5,13 @@ import { api, getErrorMessage } from "../../services/api";
 import { adminSocket } from "../../services/socket";
 import MapModal from "../../ui/MapModal";
 import NotifyBadge from "../../ui/NotifyBadge";
+import { Confirm } from "./Confirm";
 import { useAdminData } from "./AdminDataContext";
 import {
     Loader2, AlertCircle, Search, MapPin, Phone,
     X, Banknote, Wrench, CalendarClock, Ban, CheckCircle2,
     Clock, ShieldOff, UserCheck, RefreshCw, BadgeCheck, ChevronRight, MessageCircle,
-    Briefcase, Star,
+    Briefcase, Star, Trash2,
 } from "lucide-react";
 
 const VIEW_TABS = [
@@ -18,7 +19,24 @@ const VIEW_TABS = [
     { key: "pending", label: "Applications" },
     { key: "rejected", label: "Rejected" },
     { key: "blocked", label: "Blocked" },
+    // Deleting a vendor has always been a flag rather than a removal, because
+    // tickets and payouts point at the row. This is where those rows now go,
+    // and where somebody can look at them before Mongo removes them.
+    { key: "deleted", label: "Deleted" },
 ];
+
+/** How much of the seven days is left on a deleted account. */
+const purgesIn = (deletedAt) => {
+    if (!deletedAt) return "";
+    const left = new Date(deletedAt).getTime() + 7 * 24 * 60 * 60 * 1000 - Date.now();
+    if (left <= 0) return "removing now";
+
+    const days = Math.floor(left / (24 * 60 * 60 * 1000));
+    if (days >= 1) return "removed in " + days + (days === 1 ? " day" : " days");
+
+    const hours = Math.max(1, Math.floor(left / (60 * 60 * 1000)));
+    return "removed in " + hours + (hours === 1 ? " hour" : " hours");
+};
 
 const STATUS_TABS = [
     { key: "", label: "All" },
@@ -109,6 +127,10 @@ const AdminTechnicians = () => {
     const [selectedId, setSelectedId] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Emptying the bin by hand, which is the one action here nobody can undo
+    const [confirmPurge, setConfirmPurge] = useState(false);
+    const [purging, setPurging] = useState(false);
+
     const load = useCallback(async (viewKey, statusFilter, searchTerm) => {
         try {
             const params = { search: searchTerm || undefined };
@@ -144,6 +166,19 @@ const AdminTechnicians = () => {
             adminSocket.off("tech:status", onTechStatus);
         };
     }, [view, status, search, load]);
+
+    const purgeBin = async () => {
+        setPurging(true);
+        try {
+            const res = await api.delete("/admin/technicians/deleted");
+            setConfirmPurge(false);
+            handleChanged(res.data.message || "Bin emptied.");
+        } catch (err) {
+            setError(getErrorMessage(err, "Could not empty the bin"));
+        } finally {
+            setPurging(false);
+        }
+    };
 
     const handleChanged = (message) => {
         setSelectedId(null);
@@ -223,6 +258,27 @@ const AdminTechnicians = () => {
                 ))}
             </div>
 
+            {view === "deleted" && (
+                <div className="mb-4 p-4 rounded-xl border border-hairline bg-sunken flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold text-ink">Deleted accounts</p>
+                        <p className="text-xs text-ink-soft mt-0.5 max-w-lg">
+                            Kept for seven days so a deletion can be looked at, then removed
+                            automatically. Their finished jobs stay on the tickets either way.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => setConfirmPurge(true)}
+                        disabled={technicians.length === 0}
+                        className="shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-hairline-strong text-[13px] font-semibold text-danger hover:bg-danger-tint disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Clear all now
+                    </button>
+                </div>
+            )}
+
             <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
                 <input
@@ -291,6 +347,20 @@ const AdminTechnicians = () => {
                     onChanged={handleChanged}
                 />
             )}
+
+            <Confirm
+                open={confirmPurge}
+                title="Empty the bin?"
+                body={"This removes " + technicians.length + " deleted account"
+                    + (technicians.length === 1 ? "" : "s") + " from the database now, instead of waiting out the week."}
+                note="Finished jobs keep their own copy of who did the work, so the tickets are unaffected. A vendor whose wallet is not settled is left behind."
+                confirmLabel="Clear all"
+                cancelLabel="Keep them"
+                busy={purging}
+                onConfirm={purgeBin}
+                onCancel={() => setConfirmPurge(false)}
+            />
+
         </AdminLayout>
     );
 };
@@ -380,6 +450,14 @@ const VendorCard = ({ t, view, onOpen }) => {
                             <span className={"cg-pill font-medium normal-case " + (onRoster ? LIVE_TAG[t.liveStatus] : tag?.cls)}>
                                 {onRoster ? LIVE_LABELS[t.liveStatus] : tag?.label}
                             </span>
+
+                            {/* The clock on a deleted account, which is the
+                                one thing somebody opens this tab to read */}
+                            {t.isDeleted && t.deletedAt && (
+                                <span className="cg-pill bg-sunken text-ink-soft font-medium normal-case">
+                                    {purgesIn(t.deletedAt)}
+                                </span>
+                            )}
                         </div>
 
                         {/* Said quietly and only when there is something to
@@ -584,19 +662,13 @@ const TechnicianDetail = ({ technicianId, onClose, onChanged }) => {
                                         <Phone className="w-3.5 h-3.5" /> {tech.phone}
                                     </a>
                                     <p className="text-xs text-ink-soft mt-0.5">
-                                        {[tech.area, tech.city].filter(Boolean).join(", ")}, {tech.state} — {tech.pincode}
+                                        {/* `area` carries the full line now -
+                                            "Palasuni, Rasulgarh, Bhubaneswar,
+                                            Odisha" - so repeating the town
+                                            beside it said Bhubaneswar twice */}
+                                        {tech.area || tech.city} &mdash; {tech.pincode}
                                     </p>
 
-                                    {/* The address in his own words, which is
-                                        what somebody on the desk reads out when
-                                        a pin lands a few streets off and they
-                                        have to ring back. It is the reason the
-                                        client asked for it. */}
-                                    {tech.address && (
-                                        <p className="text-xs text-ink-soft mt-0.5">
-                                            {tech.address}
-                                        </p>
-                                    )}
                                     <p className="text-xs text-ink-faint mt-0.5">
                                         Signed up {new Date(tech.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                                     </p>
