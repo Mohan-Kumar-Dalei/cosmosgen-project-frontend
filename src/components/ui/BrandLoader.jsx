@@ -21,11 +21,20 @@ import { ik, LOGO } from "../pages/Customer/brand";
  * had - covering either of those with this would be taking away something the
  * reader can still use.
  */
-export const BrandLoader = ({ label = "Loading" }) => (
+export const BrandLoader = ({ label = "Loading", panel = false }) => (
     <div
         role="status"
         aria-live="polite"
-        className="min-h-screen bg-canvas grid place-items-center px-6"
+        /*
+         * `panel` is for a screen that already has furniture around it.
+         *
+         * The vendor's wallet and history load inside a layout that keeps its
+         * sidebar and its heading - only the body is empty. A full-screen
+         * loader there would either paint over the sidebar or, worse, push a
+         * screen's worth of height into a column that already has some, and
+         * the reader would lose the one thing on the page that had arrived.
+         */
+        className={(panel ? "min-h-[46vh] " : "min-h-screen bg-canvas ") + "grid place-items-center px-6"}
     >
         <div className="flex flex-col items-center">
             <img

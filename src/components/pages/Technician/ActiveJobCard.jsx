@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api, getErrorMessage } from "../../services/api";
+import { BrandLoader } from "../../ui/BrandLoader";
 import OtpGate from "../../ui/OtpGate";
 import { techSocket } from "../../services/socket";
 import RouteToCustomer from "./RouteToCustomer";
@@ -715,9 +716,7 @@ const BillModal = ({ ticket, isEdit = false, onClose, onDone, onError }) => {
 
                 <div className="flex-1 overflow-y-auto px-5 py-4">
                     {loading ? (
-                        <div className="py-10 flex justify-center">
-                            <Loader2 className="w-6 h-6 animate-spin text-ink-faint" />
-                        </div>
+                        <BrandLoader panel />
                     ) : (
                         <>
                             {step === 0 && (

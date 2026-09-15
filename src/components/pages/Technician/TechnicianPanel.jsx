@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api, getErrorMessage } from "../../services/api";
+import { BrandLoader } from "../../ui/BrandLoader";
 import { techSocket, connectTechSocket, disconnectTechSocket, onLiveResume } from "../../services/socket";
 import { notifyNew, notifyAlert, notifyDone, notifyInfo } from "../../services/notify";
 import ActiveJobCard from "./ActiveJobCard";
@@ -303,9 +304,7 @@ const TechnicianPanel = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-canvas">
-                <Loader2 className="w-6 h-6 text-ink-faint animate-spin" />
-            </div>
+            <BrandLoader />
         );
     }
 
@@ -1034,9 +1033,7 @@ const WalletTab = ({ pendingCash, refreshTrigger }) => {
 
     if (loading) {
         return (
-            <div className="py-10 flex justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-ink-faint" />
-            </div>
+            <BrandLoader panel label="Loading your wallet" />
         );
     }
 
