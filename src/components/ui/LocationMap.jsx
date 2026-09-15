@@ -180,7 +180,7 @@ const RIDER_SVG = `
   <!-- the helmet: white shell, one narrow stripe, a visor at the front edge -->
   <circle cx="50" cy="64" r="15.5" fill="url(#helm)"/>
   <path d="M45.5 49.5 C47 49 53 49 54.5 49.5 L54.5 78.5 C53 79 47 79 45.5 78.5 Z" fill="url(#blue)"/>
-  <path d="M37 59 C40 53 44 50 50 50 C56 50 60 53 63 59 C57 56 43 56 37 59 Z" fill="#2a343d"/>
+  <path d="M37 59 C40 53 44 50 50 50 C56 50 60 53 63 59 C57 56 43 56 37 59 Z" fill="#0b0e11"/>
   <ellipse cx="44" cy="57" rx="3.5" ry="1.4" fill="#8d99a3" opacity="0.75"/>
   <circle cx="50" cy="64" r="15.5" fill="none" stroke="rgba(13,26,38,0.10)" stroke-width="1"/>
 
@@ -226,16 +226,46 @@ const WAITING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="
   <path d="M34 60 C34 51 40 46 48 46 C56 46 62 51 62 60 L62 64 C57 66 39 66 34 64 Z" fill="url(#wblue)"/>
   <circle cx="48" cy="44" r="12" fill="url(#wshell)"/>
   <path d="M44.5 33 C45.8 32.7 50.2 32.7 51.5 33 L51.5 55 C50.2 55.3 45.8 55.3 44.5 55 Z" fill="url(#wblue)" opacity="0.9"/>
+  <path d="M38.5 41 C41 36.5 44 34.5 48 34.5 C52 34.5 55 36.5 57.5 41 C53 38.8 43 38.8 38.5 41 Z" fill="#0b0e11"/>
   <circle cx="48" cy="44" r="12" fill="none" stroke="rgba(13,26,38,0.14)" stroke-width="1"/>
 </svg>`;
 
 const WAITING_SIZE = 44;
 
-const waitingIcon = (maps) => ({
+const waitingIcon = (maps, size = WAITING_SIZE) => ({
     url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(WAITING_SVG),
-    scaledSize: new maps.Size(WAITING_SIZE, WAITING_SIZE),
-    anchor: new maps.Point(WAITING_SIZE / 2, WAITING_SIZE / 2),
+    scaledSize: new maps.Size(size, size),
+    anchor: new maps.Point(size / 2, size / 2),
 });
+
+/**
+ * The waiting mark breathes.
+ *
+ * A marker that never moves is hard to tell from a page that has stopped
+ * working - and this one never moves on purpose, because standing still is its
+ * entire meaning. A slow swell says the opposite: somebody is there, and this
+ * is live.
+ *
+ * Done by resizing the icon rather than animating the drawing. An SVG handed
+ * to a marker as an image is rasterised once and its own animation never runs,
+ * so the movement has to come from outside it. Twenty frames a second is
+ * plenty for something this slow and costs nothing beside the map's own
+ * redraws.
+ */
+const PULSE_MS = 1600;
+
+const startPulse = (maps, marker) => {
+    const began = Date.now();
+
+    return setInterval(() => {
+        const phase = ((Date.now() - began) % PULSE_MS) / PULSE_MS;
+
+        // A cosine, so it swells and settles instead of stepping between two
+        // sizes the way a linear loop would.
+        const swell = (1 - Math.cos(phase * 2 * Math.PI)) / 2;
+        marker.setIcon(waitingIcon(maps, WAITING_SIZE * (1 + swell * 0.16)));
+    }, 50);
+};
 
 const RIDER_W = 56;
 const RIDER_H = 74;
@@ -473,6 +503,13 @@ const LocationMap = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [encodedPolyline, state]);
 
+    useEffect(() => () => {
+        Object.values(markerRefs.current).forEach((m) => {
+            if (m?.pulse) clearInterval(m.pulse);
+        });
+        markerRefs.current = {};
+    }, []);
+
     /*
      * The dashed arc, drawn whenever there are two ends to join.
      *
@@ -522,35 +559,70 @@ const LocationMap = ({
             const key = m.title || "marker-" + i;
             seen.add(key);
             const position = { lat: m.lat, lng: m.lon };
+            /*
+             * A bike for whoever is travelling, the waiting mark for whoever
+             * has not set off, a pin for the place they are going. Anything
+             * that says none of those gets the pin, so every other map in the
+             * panel is untouched.
+             */
+            const iconFor = () => (m.kind === "vehicle"
+                ? riderIcon(maps)
+                : m.kind === "waiting"
+                    ? waitingIcon(maps)
+                    : pinIcon(maps, m.color || "#2563eb"));
+
             const existing = markerRefs.current[key];
 
             if (existing) {
-                existing.setPosition(position);
+                existing.marker.setPosition(position);
+
+                /*
+                 * And the icon, when what it is has changed.
+                 *
+                 * This was the bug behind "I tapped Directions and the bike
+                 * only appeared after a reload". A marker is matched by title,
+                 * and the technician's title does not change when he sets off -
+                 * so the marker was found, moved, and returned, and the waiting
+                 * mark stayed where a bike should have been. Only a reload
+                 * rebuilt it, which is exactly what Mohan had to do.
+                 */
+                if (existing.kind !== m.kind) {
+                    if (existing.pulse) clearInterval(existing.pulse);
+
+                    existing.marker.setIcon(iconFor());
+                    existing.kind = m.kind;
+                    existing.pulse = m.kind === "waiting" ? startPulse(maps, existing.marker) : null;
+                }
                 return;
             }
-            markerRefs.current[key] = new maps.Marker({
-                map, position,
 
-                // A van for whoever is travelling, a pin for the place they
-                // are travelling to. Anything that does not say which gets
-                // the pin, so every other map in the panel is unchanged.
-                icon: m.kind === "vehicle"
-                    ? riderIcon(maps)
-                    : m.kind === "waiting"
-                        ? waitingIcon(maps)
-                        : pinIcon(maps, m.color || "#2563eb"),
+            const marker = new maps.Marker({
+                map, position,
+                icon: iconFor(),
                 title: key,
 
                 // Above the destination pin, so the two never hide each other
-                // as the van arrives.
+                // as the rider arrives.
                 zIndex: (m.kind === "vehicle" || m.kind === "waiting") ? 50 : 2 + i,
             });
+
+            markerRefs.current[key] = {
+                marker,
+                kind: m.kind,
+                pulse: m.kind === "waiting" ? startPulse(maps, marker) : null,
+            };
         });
 
         // Drop any marker no longer in the list.
         Object.keys(markerRefs.current).forEach((key) => {
             if (seen.has(key)) return;
-            markerRefs.current[key].setMap(null);
+
+            // The pulse is a timer, and a timer outliving its marker keeps the
+            // tab awake for a marker nobody can see.
+            const gone = markerRefs.current[key];
+            if (gone.pulse) clearInterval(gone.pulse);
+            gone.marker.setMap(null);
+
             delete markerRefs.current[key];
         });
 

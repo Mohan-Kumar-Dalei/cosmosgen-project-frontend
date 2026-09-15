@@ -76,6 +76,25 @@ const CustomerTracking = () => {
         socketRef.current = s;
 
         const onUpdate = (p) => {
+            /*
+             * A change of stage goes and fetches the rest.
+             *
+             * The event carries what the server had to hand at that moment,
+             * which is not always the whole picture: tapping Directions
+             * announces the departure immediately, and if the vendor's phone
+             * has not reported a position since, technicianAt in that payload
+             * is null - so the page moved to "on the way" with nothing to draw
+             * and Mohan had to reload before the bike turned up.
+             *
+             * One request on a stage change closes that. It does not fire on
+             * the position updates that follow, which are the frequent ones
+             * and already carry everything the marker needs.
+             */
+            setData((prev) => {
+                if (p.stage && prev && p.stage !== prev.stage) load();
+                return prev;
+            });
+
             setData((prev) => (prev ? {
                 ...prev,
                 stage: p.stage || prev.stage,
