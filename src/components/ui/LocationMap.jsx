@@ -327,7 +327,19 @@ const MapSkeleton = () => (
 const LocationMap = ({
     markers = [],
     encodedPolyline = null,
-    zoom = 15,
+    /*
+     * Street level, and deliberately not further.
+     *
+     * Mohan asked for something near 22, which is the level individual
+     * buildings are drawn at. It is only usable when there is one point to
+     * look at: two points more than about fifty metres apart cannot both be on
+     * a screen at that zoom, and the arc and the route between them are the
+     * whole reason this map exists. So this is the zoom for a lone marker, and
+     * a pair is still framed by fitBounds - which now goes as close as the two
+     * of them allow, because the padding was cut and the lock no longer clamps
+     * it.
+     */
+    zoom = 19,
     className = "h-64",
     gestureHandling = "cooperative",
 
@@ -346,6 +358,28 @@ const LocationMap = ({
     const mapRef = useRef(null);
     const lineRef = useRef(null);
     const arcRef = useRef(null);
+
+    /**
+     * Freeze the zoom where the map settled, not where it started.
+     *
+     * Called once the framing is done, so a customer cannot pinch closer or
+     * further but is left looking at a view that actually contains both ends
+     * of the journey. Dragging still works, which is the part that matters
+     * when a rider moves off the edge.
+     */
+    const lockAfterFit = () => {
+        if (!lockZoom) return;
+        const map = mapRef.current;
+        const maps = mapsRef.current;
+        if (!map || !maps) return;
+
+        // Google settles the zoom a beat after fitBounds, so the value is read
+        // on the event that says it has rather than straight away.
+        maps.event.addListenerOnce(map, "idle", () => {
+            const settled = map.getZoom();
+            if (typeof settled === "number") map.setOptions({ minZoom: settled, maxZoom: settled });
+        });
+    };
     const markerRefs = useRef({});
     const hasFitRef = useRef(false);
     const [state, setState] = useState("loading");
@@ -381,9 +415,18 @@ const LocationMap = ({
                      * has moved off the edge still has to be able to follow
                      * him.
                      */
-                    ...(lockZoom
-                        ? { minZoom: zoom, maxZoom: zoom, scrollwheel: false, disableDoubleClickZoom: true }
-                        : {}),
+                    /*
+                     * The wheel and the double click go now; the pinch is
+                     * stopped later, once the view has settled.
+                     *
+                     * Locking min and max here was wrong and it broke the map:
+                     * fitBounds cannot zoom past a limit, so pinning both ends
+                     * to the starting zoom meant a fit that was supposed to
+                     * frame the rider and the door was clamped, and one of
+                     * them ended up off the screen. The lock belongs after the
+                     * fit, at whatever zoom the fit chose - see lockAfterFit().
+                     */
+                    ...(lockZoom ? { scrollwheel: false, disableDoubleClickZoom: true } : {}),
                     // "greedy" would swallow the page scroll on a phone, which
                     // traps the reader inside the map.
                     gestureHandling,
@@ -422,8 +465,12 @@ const LocationMap = ({
 
         const bounds = new maps.LatLngBounds();
         path.forEach((p) => bounds.extend(p));
-        map.fitBounds(bounds, 48);
+        map.fitBounds(bounds, 30);
+        lockAfterFit();
         hasFitRef.current = true;
+        // lockAfterFit only reads refs and the lockZoom flag, neither of which
+        // changes across a render in a way this effect should chase.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [encodedPolyline, state]);
 
     /*
@@ -516,11 +563,19 @@ const LocationMap = ({
             } else {
                 const bounds = new maps.LatLngBounds();
                 markers.forEach((m) => bounds.extend({ lat: m.lat, lng: m.lon }));
-                // A little room around the pins, not a lot. Ninety was too
-                // much - it pushed a two minute ride out to a view of the
-                // whole town.
-                map.fitBounds(bounds, 56);
+                /*
+                  * Close in, with just enough margin to keep both ends off the
+                  * edge.
+                  *
+                  * Padding is what decides the zoom here - more of it pushes
+                  * the view further out - and the whole point of this map is
+                  * the dashed arc and the route between the two points. Read
+                  * from across a room they have to be lines, not a hairline
+                  * across a picture of the town.
+                  */
+                map.fitBounds(bounds, 34);
             }
+            lockAfterFit();
             hasFitRef.current = true;
         }
         // The array is rebuilt by the parent on every render, so depend on the
