@@ -193,8 +193,8 @@ const RIDER_SVG = `
   <rect x="45" y="119" width="10" height="11" rx="4" fill="url(#dark)"/>
 </svg>`;
 
-const RIDER_W = 70;
-const RIDER_H = 92;
+const RIDER_W = 56;
+const RIDER_H = 74;
 
 const riderIcon = (maps) => ({
     url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(RIDER_SVG),
@@ -213,6 +213,43 @@ const riderIcon = (maps) => ({
 
 
 
+
+/**
+ * The dashed curve from whoever is coming to where they are going.
+ *
+ * Not the road route - that is the solid line, and it only exists once a route
+ * has been worked out. This is the other thing Swiggy draws: a light arc that
+ * says "this person, to that door", there from the moment a job has somebody
+ * on it and before anybody has set off.
+ *
+ * Curved on purpose. A straight line between two pins reads as a measurement;
+ * a bowed one reads as a journey, and it keeps the line off the marker at each
+ * end. The bow is a quadratic bezier sampled into points, because a Google
+ * polyline takes coordinates rather than a path.
+ */
+const arcBetween = (from, to, bend = 0.16, steps = 48) => {
+    // The control point sits off to one side of the midpoint, at right angles
+    // to the line - which is what makes the bow rather than a sag.
+    const cLat = (from.lat + to.lat) / 2 - (to.lon - from.lon) * bend;
+    const cLon = (from.lon + to.lon) / 2 + (to.lat - from.lat) * bend;
+
+    const points = [];
+    for (let i = 0; i <= steps; i += 1) {
+        const t = i / steps;
+        const u = 1 - t;
+        points.push({
+            lat: u * u * from.lat + 2 * u * t * cLat + t * t * to.lat,
+            lng: u * u * from.lon + 2 * u * t * cLon + t * t * to.lon,
+        });
+    }
+    return points;
+};
+
+/**
+ * A dash, the only way Google's API draws one: a symbol repeated along a line
+ * whose own stroke is invisible.
+ */
+const DASH = { path: "M 0,-1 0,1", strokeOpacity: 0.85, strokeWeight: 2.6, scale: 3 };
 
 /**
  * Shown until Google answers.
@@ -246,14 +283,25 @@ const MapSkeleton = () => (
 const LocationMap = ({
     markers = [],
     encodedPolyline = null,
-    zoom = 15,
+    zoom = 14,
     className = "h-64",
     gestureHandling = "cooperative",
+
+    /*
+     * Two markers to join with the dashed arc, when the road route is not
+     * known yet. Given as a pair rather than taken from the markers list, because
+     * only the caller knows which two of them are the journey.
+     */
+    arc = null,
+
+    /** Fix the zoom where it lands, so a pinch cannot change it. */
+    lockZoom = false,
 }) => {
     const containerRef = useRef(null);
     const mapsRef = useRef(null);
     const mapRef = useRef(null);
     const lineRef = useRef(null);
+    const arcRef = useRef(null);
     const markerRefs = useRef({});
     const hasFitRef = useRef(false);
     const [state, setState] = useState("loading");
@@ -276,8 +324,22 @@ const LocationMap = ({
                     center: first ? { lat: first.lat, lng: first.lon } : { lat: 20.2961, lng: 85.8245 },
                     zoom,
                     // No zoom buttons, no pan arrows, no Street View peg, no
-                    // map-type switch. Pinch and drag still work.
+                    // map-type switch.
                     disableDefaultUI: true,
+
+                    /*
+                     * A tracking page is looked at, not explored.
+                     *
+                     * Pinning the two zoom limits together is what actually
+                     * stops a pinch: there is no setting for "pan but do not
+                     * zoom", and gestureHandling "none" would take the drag
+                     * away too - which matters, because a customer whose rider
+                     * has moved off the edge still has to be able to follow
+                     * him.
+                     */
+                    ...(lockZoom
+                        ? { minZoom: zoom, maxZoom: zoom, scrollwheel: false, disableDoubleClickZoom: true }
+                        : {}),
                     // "greedy" would swallow the page scroll on a phone, which
                     // traps the reader inside the map.
                     gestureHandling,
@@ -316,9 +378,43 @@ const LocationMap = ({
 
         const bounds = new maps.LatLngBounds();
         path.forEach((p) => bounds.extend(p));
-        map.fitBounds(bounds, 32);
+        map.fitBounds(bounds, 80);
         hasFitRef.current = true;
     }, [encodedPolyline, state]);
+
+    /*
+     * The dashed arc, drawn whenever there are two ends to join.
+     *
+     * Taken down as soon as the road route arrives: two lines between the same
+     * two points is one line too many, and the real route is the better of the
+     * two. Until then this is what tells the customer somebody is on the way
+     * and roughly from where.
+     */
+    useEffect(() => {
+        const maps = mapsRef.current;
+        const map = mapRef.current;
+        if (state !== "ready" || !maps || !map) return;
+
+        if (arcRef.current) {
+            arcRef.current.setMap(null);
+            arcRef.current = null;
+        }
+
+        if (!arc?.from || !arc?.to || encodedPolyline) return;
+
+        arcRef.current = new maps.Polyline({
+            map,
+            path: arcBetween(arc.from, arc.to),
+
+            // The line itself is invisible; the dashes along it are the line.
+            strokeOpacity: 0,
+            icons: [{ icon: { ...DASH, strokeColor: "#0f78d0" }, offset: "0", repeat: "15px" }],
+            zIndex: 1,
+        });
+        // The object is rebuilt by the parent every render, so depend on the
+        // four numbers in it rather than on its identity.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state, encodedPolyline, arc?.from?.lat, arc?.from?.lon, arc?.to?.lat, arc?.to?.lon]);
 
     // Markers are matched by their title, not their position in the array.
     // Indexing broke the moment a list went from one pin to two: the live
@@ -372,7 +468,9 @@ const LocationMap = ({
             } else {
                 const bounds = new maps.LatLngBounds();
                 markers.forEach((m) => bounds.extend({ lat: m.lat, lng: m.lon }));
-                map.fitBounds(bounds, 48);
+                // Roomy on purpose: fitted tight, two pins a street apart
+                // fill the screen and nobody can see where either of them is.
+                map.fitBounds(bounds, 90);
             }
             hasFitRef.current = true;
         }

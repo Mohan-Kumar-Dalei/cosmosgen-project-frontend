@@ -199,8 +199,30 @@ const CustomerTracking = () => {
                 <LocationMap
                     markers={markers}
                     encodedPolyline={data.ride?.encodedPolyline}
+
+                    /*
+                     * The dashed arc, from whoever is coming to the door they
+                     * are coming to. It shows from the moment a job has
+                     * somebody on it, and the map component drops it the
+                     * instant a real road route exists to replace it.
+                     */
+                    arc={data.technicianAt && data.destination?.lat != null
+                        ? {
+                            from: { lat: data.technicianAt.lat, lon: data.technicianAt.lon },
+                            to: { lat: data.destination.lat, lon: data.destination.lon },
+                        }
+                        : null}
+
                     className="h-[46vh] min-h-[280px]"
                     gestureHandling="greedy"
+
+                    /*
+                     * The customer does not get to zoom. This page has one job
+                     * - where is he, how long - and a map somebody has pinched
+                     * down to street level answers neither. Dragging still
+                     * works, so a rider who moves off the edge can be followed.
+                     */
+                    lockZoom
                 />
 
                 <div className="absolute top-0 left-0 right-0 px-4 pt-4 flex items-center justify-between pointer-events-none">
