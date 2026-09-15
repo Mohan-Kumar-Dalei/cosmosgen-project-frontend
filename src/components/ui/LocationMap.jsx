@@ -193,6 +193,50 @@ const RIDER_SVG = `
   <rect x="45" y="119" width="10" height="11" rx="4" fill="url(#dark)"/>
 </svg>`;
 
+/**
+ * The same rider, standing still.
+ *
+ * Shown from the moment a job has somebody on it until they tap Directions.
+ * Drawing the bike then would say they had set off when they had not - and a
+ * customer watching a bike that never moves decides the page is broken long
+ * before they decide nobody has left yet.
+ *
+ * So it is the helmet on its own, on a disc with a soft ring around it: the
+ * person is real and accounted for, and nothing about it suggests movement.
+ * The ring is what reads as waiting.
+ */
+const WAITING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <defs>
+    <radialGradient id="wshell" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#f0f3f6"/>
+      <stop offset="1" stop-color="#bcc6cf"/>
+    </radialGradient>
+    <linearGradient id="wblue" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#4b9ee4"/>
+      <stop offset="0.5" stop-color="#0f78d0"/>
+      <stop offset="1" stop-color="#0a4f8c"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="48" cy="48" r="34" fill="#0f78d0" opacity="0.13"/>
+  <circle cx="48" cy="48" r="25" fill="#ffffff"/>
+  <circle cx="48" cy="48" r="25" fill="none" stroke="#0f78d0" stroke-width="2.2" opacity="0.55"/>
+
+  <path d="M34 60 C34 51 40 46 48 46 C56 46 62 51 62 60 L62 64 C57 66 39 66 34 64 Z" fill="url(#wblue)"/>
+  <circle cx="48" cy="44" r="12" fill="url(#wshell)"/>
+  <path d="M44.5 33 C45.8 32.7 50.2 32.7 51.5 33 L51.5 55 C50.2 55.3 45.8 55.3 44.5 55 Z" fill="url(#wblue)" opacity="0.9"/>
+  <circle cx="48" cy="44" r="12" fill="none" stroke="rgba(13,26,38,0.14)" stroke-width="1"/>
+</svg>`;
+
+const WAITING_SIZE = 44;
+
+const waitingIcon = (maps) => ({
+    url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(WAITING_SVG),
+    scaledSize: new maps.Size(WAITING_SIZE, WAITING_SIZE),
+    anchor: new maps.Point(WAITING_SIZE / 2, WAITING_SIZE / 2),
+});
+
 const RIDER_W = 56;
 const RIDER_H = 74;
 
@@ -283,7 +327,7 @@ const MapSkeleton = () => (
 const LocationMap = ({
     markers = [],
     encodedPolyline = null,
-    zoom = 14,
+    zoom = 15,
     className = "h-64",
     gestureHandling = "cooperative",
 
@@ -378,7 +422,7 @@ const LocationMap = ({
 
         const bounds = new maps.LatLngBounds();
         path.forEach((p) => bounds.extend(p));
-        map.fitBounds(bounds, 80);
+        map.fitBounds(bounds, 48);
         hasFitRef.current = true;
     }, [encodedPolyline, state]);
 
@@ -443,12 +487,16 @@ const LocationMap = ({
                 // A van for whoever is travelling, a pin for the place they
                 // are travelling to. Anything that does not say which gets
                 // the pin, so every other map in the panel is unchanged.
-                icon: m.kind === "vehicle" ? riderIcon(maps) : pinIcon(maps, m.color || "#2563eb"),
+                icon: m.kind === "vehicle"
+                    ? riderIcon(maps)
+                    : m.kind === "waiting"
+                        ? waitingIcon(maps)
+                        : pinIcon(maps, m.color || "#2563eb"),
                 title: key,
 
                 // Above the destination pin, so the two never hide each other
                 // as the van arrives.
-                zIndex: m.kind === "vehicle" ? 50 : 2 + i,
+                zIndex: (m.kind === "vehicle" || m.kind === "waiting") ? 50 : 2 + i,
             });
         });
 
@@ -468,9 +516,10 @@ const LocationMap = ({
             } else {
                 const bounds = new maps.LatLngBounds();
                 markers.forEach((m) => bounds.extend({ lat: m.lat, lng: m.lon }));
-                // Roomy on purpose: fitted tight, two pins a street apart
-                // fill the screen and nobody can see where either of them is.
-                map.fitBounds(bounds, 90);
+                // A little room around the pins, not a lot. Ninety was too
+                // much - it pushed a two minute ride out to a view of the
+                // whole town.
+                map.fitBounds(bounds, 56);
             }
             hasFitRef.current = true;
         }

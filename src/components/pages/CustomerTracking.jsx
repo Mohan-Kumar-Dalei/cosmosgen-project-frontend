@@ -149,8 +149,16 @@ const CustomerTracking = () => {
                 color: "#0f78d0",
                 title: data.technician?.name || "Technician",
 
-                // The one marker that is moving, so the one that is a van
-                kind: "vehicle",
+                /*
+                 * The bike only once he has actually set off.
+                 *
+                 * Before that it is the waiting mark - a helmet on a disc,
+                 * standing still. A bike drawn at "assigned" claims a journey
+                 * that has not started, and a customer watching a bike that
+                 * never moves concludes the page is broken rather than that
+                 * nobody has left yet.
+                 */
+                kind: (data.stage === "on_the_way" || data.stage === "arrived") ? "vehicle" : "waiting",
             }
             : null);
 
@@ -184,11 +192,18 @@ const CustomerTracking = () => {
     }
 
     const done = data.stage === "done";
+    /*
+     * "On the way" was the catch-all, which meant it was also what an assigned
+     * job said - the heading claimed a departure while the stepper underneath
+     * it still had Assigned lit. The two now agree, and the estimate is only
+     * offered once there is a journey for it to be an estimate of.
+     */
     const headline = done ? "Job complete"
         : data.stage === "arrived" ? "At your door"
             : data.stage === "working" ? "Work under way"
-                : eta != null ? eta + " min away"
-                    : "On the way";
+                : data.stage === "assigned" ? "Getting ready to leave"
+                    : eta != null ? eta + " min away"
+                        : "On the way";
 
     return (
         <div className="min-h-screen bg-canvas flex flex-col">
