@@ -571,7 +571,7 @@ const Footer = ({ inner, lifted, mark }) => (
                         <span className="font-display font-semibold text-lg tracking-tight">Cosmosgen</span>
                     </div>
                     <p className="mt-4 text-sm text-white/55 max-w-xs leading-relaxed">
-                        Electricians, plumbers, appliance engineers and cleaners across Odisha,
+                        Electricians, plumbers, appliance engineers and cleaners near you,
                         sent to your door at a price set before anybody starts.
                     </p>
                 </div>
@@ -611,7 +611,7 @@ const Footer = ({ inner, lifted, mark }) => (
 
             <div className="mt-14 pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <p className="text-xs text-white/40">
-                    © {new Date().getFullYear()} Cosmosgen Engineers Pvt. Ltd. · Odisha, India
+                    © {new Date().getFullYear()} Cosmosgen Engineers Pvt. Ltd. · India
                 </p>
                 <p className="text-xs text-white/40 flex items-center gap-1.5">
                     <Smartphone className="w-3 h-3" />

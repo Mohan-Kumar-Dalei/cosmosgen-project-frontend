@@ -78,7 +78,7 @@ const CustomerJoin = () => {
                 <PageHead
                     eyebrow="Work with us"
                     title="You do the work. The office finds it, prices it and stands behind it."
-                    lede="Cosmosgen is approving electricians, plumbers, appliance engineers and cleaners across Odisha. You bring the skill and the tools; everything between the customer's first message and the money reaching you is ours to run."
+                    lede="Cosmosgen is approving electricians, plumbers, appliance engineers and cleaners town by town. You bring the skill and the tools; everything between the customer's first message and the money reaching you is ours to run."
                     foot={<HeadStrip items={["Work sent to you", "Your share, same day", "You choose your hours", "No joining fee"]} />}
                     art={(
                         <Art

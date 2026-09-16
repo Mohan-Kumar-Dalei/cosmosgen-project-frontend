@@ -87,7 +87,7 @@ const DeveloperLogin = () => {
                                 onChange={change}
                                 autoComplete="username"
                                 className={FIELD}
-                                placeholder="you@cosmosgen.in"
+                                placeholder="you@cosmosgen.com"
                             />
                         </label>
 

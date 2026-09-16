@@ -56,7 +56,7 @@ const CustomerAbout = () => {
                 <PageHead
                     eyebrow="About us"
                     title="A repair company that answers for the repair"
-                    lede="Cosmosgen Engineers Pvt. Ltd. sends its own approved engineers to homes across Odisha. Not a directory, not a lead exchange. The office picks who comes, sets what it costs and carries the job to the end."
+                    lede="Cosmosgen Engineers Pvt. Ltd. sends its own approved engineers to your door. Not a directory, not a lead exchange. The office picks who comes, sets what it costs and carries the job to the end."
                     foot={<HeadStrip items={STANDARDS.map((x) => x.strip)} />}
                     art={(
                         <Art
@@ -156,7 +156,7 @@ const CustomerAbout = () => {
                         <div>
                             <Head
                                 eyebrow="Where we work"
-                                title="Odisha, town by town, as fast as we can approve people"
+                                title="Town by town, as fast as we can approve people"
                                 lede="The catalogue is the same everywhere. The people who do the work are not, so the site asks where you are before it promises anything, and says plainly when we have not reached you yet."
                             />
 
@@ -186,7 +186,7 @@ const CustomerAbout = () => {
                                 tone="dark"
                                 eyebrow="Work with us"
                                 title="If you are the engineer, not the customer"
-                                lede="We are approving electricians, plumbers, appliance engineers and cleaners across Odisha. The office finds the work, you do the job, and what you earn is yours the moment it is done."
+                                lede="We are approving electricians, plumbers, appliance engineers and cleaners town by town. The office finds the work, you do the job, and what you earn is yours the moment it is done."
                             />
                         </div>
 

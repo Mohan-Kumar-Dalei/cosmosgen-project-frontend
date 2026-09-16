@@ -192,7 +192,7 @@ export const HomeHero = () => {
                     <p data-hero-line>
                         <span className="inline-flex items-center gap-2 h-8 pl-2.5 pr-4 rounded-full bg-surface shadow-card text-[11px] font-bold uppercase tracking-[0.16em] text-ink-soft">
                             <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-brand" />
-                            Cosmosgen · Odisha
+                            Cosmosgen · India
                         </span>
                     </p>
 
