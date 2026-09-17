@@ -51,7 +51,7 @@ const LIVE_STYLES = {
     offline: "bg-sunken text-ink-soft",
 };
 
-const LIVE_LABELS = { available: "Free", on_job: "On job", offline: "Offline" };
+const LIVE_LABELS = { available: "Free", on_job: "On job", offline: "Offline", paused: "Paused" };
 
 const timeAgo = (dateStr) => {
     const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
@@ -96,6 +96,16 @@ const howLong = (ms) => {
  * is the figure that turns "offline" into a pattern.
  */
 const spell = (t) => {
+    /*
+     * Why, not just that. A count on its own invites the office to guess, and
+     * the count is the entire case for the pause.
+     */
+    if (t.paused) {
+        const back = new Date(t.suspendedUntil);
+        return "Turned down " + (t.declines?.today || 0) + " jobs today. Back "
+            + back.toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit", hour12: true });
+    }
+
     if (t.liveStatus === "on_job") return "";
 
     const since = t.availabilitySince ? new Date(t.availabilitySince).getTime() : 0;
@@ -379,6 +389,11 @@ const LIVE_TAG = {
     available: "bg-brand-tint text-brand",
     on_job: "bg-accent-tint text-accent",
     offline: "bg-sunken text-ink-soft",
+
+    // Loud on purpose. A paused vendor reads as "offline" everywhere else, and
+    // offline means stepped away - which is the wrong thing to think about
+    // somebody the system has stopped.
+    paused: "bg-danger-tint text-danger",
 };
 
 const RoundAction = ({ href, label, children }) => (
@@ -465,7 +480,7 @@ const VendorCard = ({ t, view, onOpen }) => {
                             no stretch to report, and a blank is better than a
                             zero */}
                         {onRoster && spell(t) && (
-                            <p className={"text-[11.5px] mt-1 " + (t.liveStatus === "offline" ? "text-warn" : "text-ink-faint")}>
+                            <p className={"text-[11.5px] mt-1 " + (t.paused ? "text-danger" : t.liveStatus === "offline" ? "text-warn" : "text-ink-faint")}>
                                 {spell(t)}
                             </p>
                         )}

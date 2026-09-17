@@ -16,7 +16,29 @@ import {
 const rupees = (paise) => (Number(paise || 0) / 100).toFixed(2);
 
 const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
+    /*
+     * Assigned is the office's decision; accepted is the technician's.
+     *
+     * Until he accepts, the customer has been told nothing at all - not his
+     * name, not his number, not the tracking link - so there is nothing on
+     * this job he can usefully do except say yes or hand it back.
+     */
+    const accepted = Boolean(ticket.acceptedAt);
+    const [accepting, setAccepting] = useState(false);
     const [panel, setPanel] = useState(null);
+
+    const accept = async () => {
+        setAccepting(true);
+        setError("");
+        try {
+            await api.post("/technician/tickets/" + ticket._id + "/accept");
+            onUpdate();
+        } catch (err) {
+            setError(getErrorMessage(err, "Could not accept the job"));
+        } finally {
+            setAccepting(false);
+        }
+    };
     const [error, setError] = useState("");
     const [startingWork, setStartingWork] = useState(false);
     // Which door code is being asked for, if any: "start" or "close"
@@ -221,6 +243,9 @@ const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
                         openStart={() => setGate("start")}
                         setPanel={setPanel}
                         onHold={onHold}
+                        accepted={accepted}
+                        accepting={accepting}
+                        onAccept={accept}
                     />
                 </div>
             </div>
@@ -265,12 +290,43 @@ const ActiveJobCard = ({ ticket, onUpdate, techPos, visitChargePaise }) => {
  * different columns on desktop and mobile. Keeping them in one component
  * means a change to any action only has to be made once.
  */
-const JobActions = ({ ticket, isCashInvoice, openStart, startingWork, setPanel, onHold }) => (
+const JobActions = ({
+    ticket, isCashInvoice, openStart, startingWork, setPanel, onHold,
+    accepted, accepting, onAccept,
+}) => (
     <>
         {onHold ? (
             <p className="w-full text-center text-sm text-ink-soft py-2">
                 Waiting on the office — nothing else to do on this job right now.
             </p>
+        ) : !accepted ? (
+            /*
+             * An offer, not yet a job. Two choices and nothing else,
+             * because nothing else is honest yet - the customer has not
+             * been told this technician exists.
+             */
+            <>
+                <p className="w-full text-sm text-ink-soft">
+                    The customer has not been told about you yet. Accepting
+                    sends them your name, your number and the tracking link.
+                </p>
+
+                <button
+                    onClick={onAccept}
+                    disabled={accepting}
+                    className="cg-btn cg-btn-go flex-1 min-w-[160px] py-3"
+                >
+                    {accepting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {accepting ? "Accepting..." : "Accept this job"}
+                </button>
+
+                <button
+                    onClick={() => setPanel("release")}
+                    className="cg-btn cg-btn-danger flex-1 min-w-[160px] py-3"
+                >
+                    Can't do this job
+                </button>
+            </>
         ) : (
         <>
         {ticket.status === "Assigned" && (

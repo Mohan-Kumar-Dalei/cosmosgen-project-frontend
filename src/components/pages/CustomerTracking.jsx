@@ -14,6 +14,12 @@ const LOGO = "https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?
  * runs its queue with. "Assigned" and "In-Progress" answer a dispatcher;
  * neither tells the person at home whether anyone has set off yet.
  */
+/** How long the bike stands at the door before it is taken off the map. */
+const RIDER_LINGER_MS = 30000;
+
+/** The index of "arrived" in STAGES, which is the stage the wait belongs to. */
+const ARRIVED = 2;
+
 const STAGES = [
     { key: "assigned", label: "Assigned", line: "We have someone for this job." },
     { key: "on_the_way", label: "On the way", line: "They have set off towards you." },
@@ -154,6 +160,34 @@ const CustomerTracking = () => {
 
     const stageIndex = Math.max(0, STAGES.findIndex((s) => s.key === data?.stage));
 
+    /*
+     * The bike stands at the door a moment before it goes.
+     *
+     * It used to stay on the map for the whole job, which left a technician
+     * apparently still riding while he was inside fixing the fridge. Taking it
+     * off the instant he arrives is worse, though - the marker vanishes at the
+     * exact second the customer looks up to see where he got to, and that
+     * reads as the tracking breaking rather than the job starting. So it waits
+     * there for half a minute, as Mohan asked, and then goes.
+     *
+     * Anything past "arrived" means the wait is long over, so the bike is gone
+     * already - otherwise moving on to "working" would start a fresh timer and
+     * bring it back.
+     */
+    const [lingered, setLingered] = useState(false);
+
+    useEffect(() => {
+        if (stageIndex !== ARRIVED) return undefined;
+
+        const id = setTimeout(() => setLingered(true), RIDER_LINGER_MS);
+
+        // Cleared on the way out as well as on unmount, so a job that is put
+        // back to "on the way" gets its full wait again rather than none.
+        return () => { clearTimeout(id); setLingered(false); };
+    }, [stageIndex]);
+
+    const riderGone = stageIndex > ARRIVED || (stageIndex === ARRIVED && lingered);
+
     const markers = useMemo(() => {
         if (!data) return [];
         const list = [];
@@ -161,7 +195,7 @@ const CustomerTracking = () => {
         // Position 0 is always the technician, so the marker is moved rather
         // than rebuilt on each fix - a rebuilt marker blinks, and a live
         // tracker that blinks looks broken.
-        list.push(data.technicianAt
+        list.push(data.technicianAt && !riderGone
             ? {
                 lat: data.technicianAt.lat,
                 lon: data.technicianAt.lon,
@@ -185,7 +219,7 @@ const CustomerTracking = () => {
             list.push({ lat: data.destination.lat, lon: data.destination.lon, color: "#17a03c", title: "Your address" });
         }
         return list.filter(Boolean);
-    }, [data]);
+    }, [data, riderGone]);
 
     const eta = data ? minutesFrom(data.ride?.etaSeconds, data.ride?.etaAt) : null;
     void tick;
@@ -249,6 +283,15 @@ const CustomerTracking = () => {
 
                     className="h-[46vh] min-h-[280px]"
                     gestureHandling="greedy"
+
+                    /*
+                     * Close in on the rider and stay with him, at the zoom
+                     * Mohan picked off the tracking demo. 18 is the level lane
+                     * names and individual buildings are drawn at, which is
+                     * what "where has he got to" actually needs.
+                     */
+                    follow
+                    zoom={18}
 
                     /*
                      * The customer does not get to zoom. This page has one job

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { MapPin } from "lucide-react";
 
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -230,7 +230,19 @@ const waitingSvg = (ringR, ringOpacity) => `<svg xmlns="http://www.w3.org/2000/s
   <circle cx="48" cy="44" r="12" fill="none" stroke="rgba(13,26,38,0.14)" stroke-width="1"/>
 </svg>`;
 
-const WAITING_SIZE = 44;
+/*
+ * The same scale as the rider, because they are the same person.
+ *
+ * This was 44 while the bike was 56, which read correctly. The bike is 30 now
+ * - sized to sit between the kerbs rather than across them - and a waiting
+ * mark left at 44 would be half again as big as the man once he sets off. The
+ * sequence would read backwards: standing still bigger than riding.
+ *
+ * Kept a shade larger than 30 on purpose. The ring pulses outward from inside
+ * this box, so a few points of margin are what the pulse travels through; cut
+ * to exactly 30 and the swell has nowhere to go.
+ */
+const WAITING_SIZE = 34;
 
 const waitingIcon = (maps, ringR = 34, ringOpacity = 0.13) => ({
     url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(waitingSvg(ringR, ringOpacity)),
@@ -271,20 +283,200 @@ const startPulse = (maps, marker) => {
     }, 50);
 };
 
-const RIDER_W = 56;
-const RIDER_H = 74;
+/**
+ * Where the rider is on the route, which way the road points there, and what
+ * is left of the journey.
+ *
+ * Three questions with one answer, because they come from one measurement:
+ * the closest point on the drawn line to the last fix. The same function, on
+ * the same reasoning, is in the customer app - see customer-app/src/route.js,
+ * where the long version of why is written down.
+ *
+ * In short: the bike used to point north whatever the road did; the blue line
+ * was drawn once and never shortened, so only a reload ever cut it; and a fix
+ * taken between buildings sat the bike in the gardens beside the road.
+ */
 
-const riderIcon = (maps) => ({
-    url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(RIDER_SVG),
-    scaledSize: new maps.Size(RIDER_W, RIDER_H),
+/**
+ * Google hands a route back as an encoded string rather than a list of points.
+ *
+ * Its own maps.geometry.encoding.decodePath does this, but only once the maps
+ * library has loaded - and the route has to be unpacked while the component
+ * renders, before any of that is reachable. This is the published algorithm,
+ * the same one the customer app carries; there is no shorter honest version.
+ */
+const decodePath = (encoded) => {
+    const points = [];
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < encoded.length) {
+        let result = 0;
+        let shift = 0;
+        let byte;
+
+        do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        lat += (result & 1) ? ~(result >> 1) : result >> 1;
+
+        result = 0;
+        shift = 0;
+
+        do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        lng += (result & 1) ? ~(result >> 1) : result >> 1;
+
+        points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    }
+
+    return points;
+};
+
+const RAD = Math.PI / 180;
+
+/** Metres per degree of latitude. Longitude shrinks by cos(lat). */
+const DEG_M = 111320;
+
+const bearingBetween = (a, b) => {
+    const lat1 = a.lat * RAD;
+    const lat2 = b.lat * RAD;
+    const dLng = (b.lng - a.lng) * RAD;
+
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+
+    return (Math.atan2(y, x) / RAD + 360) % 360;
+};
+
+const snapToRoute = (points, at, maxDrift = 45) => {
+    const idle = { point: at || null, remaining: points || null, heading: null };
+
+    if (!at || !points || points.length < 2) return idle;
 
     /*
-     * Centred, near enough. A marker drawn from above sits on its position
-     * rather than pointing at it, so there is no tip to anchor; a touch past
-     * the middle, because the rider is the heavy half of the picture.
+     * Flat maths, on purpose. Projecting a point onto a segment is arithmetic
+     * great-circle formulae cannot do directly, and across the few kilometres
+     * a job covers the error from treating the earth as flat is centimetres.
+     * Longitude is scaled by cos(latitude) so that "closest" means closest
+     * rather than closest-if-you-are-on-the-equator.
      */
-    anchor: new maps.Point(RIDER_W * 0.5, RIDER_H * 0.55),
-});
+    const k = Math.cos(at.lat * RAD);
+    const px = at.lng * k;
+    const py = at.lat;
+
+    let best = null;
+
+    for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i];
+        const b = points[i + 1];
+
+        const ax = a.lng * k;
+        const ay = a.lat;
+        const dx = b.lng * k - ax;
+        const dy = b.lat - ay;
+
+        const len2 = dx * dx + dy * dy;
+
+        // Clamped to the segment, so a point past either end lands on the end
+        // rather than on the line's imaginary continuation.
+        const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+
+        const fx = ax + t * dx;
+        const fy = ay + t * dy;
+        const gap = (px - fx) * (px - fx) + (py - fy) * (py - fy);
+
+        if (!best || gap < best.gap) {
+            best = { gap, index: i, point: { lat: fy, lng: fx / k } };
+        }
+    }
+
+    const heading = bearingBetween(points[best.index], points[best.index + 1]);
+
+    // Too far from the line to be noise around it: he has turned off the
+    // route, or the route is stale. Leave him where the fix says and keep the
+    // whole line until a fresh one arrives.
+    if (Math.sqrt(best.gap) * DEG_M > maxDrift) return { ...idle, heading };
+
+    return {
+        point: best.point,
+        remaining: [best.point, ...points.slice(best.index + 1)],
+        heading,
+    };
+};
+
+/*
+ * Sized against the road, not against the screen.
+ *
+ * It was 56 wide, which is about twice a two-lane road at the zoom the
+ * tracking map sits at - so the rider read as something laid on top of the
+ * map rather than something travelling along it. At 36 he fits between the
+ * kerbs, which is what makes the movement look like movement. Mohan settled
+ * on 30 against real tiles at the zoom the tracking screen uses.
+ *
+ * The 100 x 132 viewBox is unchanged, so the proportions are the drawing's
+ * own: 36 wide is 48 tall.
+ */
+const RIDER_W = 30;
+const RIDER_H = 40;
+
+/*
+ * A square canvas, so the rider can turn inside it without losing a wheel.
+ *
+ * Google's marker icons are images, and an image has no rotation of its own -
+ * the turn has to be in the artwork. Rotating a 100 x 132 drawing inside a
+ * 100 x 132 box clips the corners at every angle but the one it was drawn at,
+ * so the box is widened to the drawing's diagonal, which no rotation can
+ * exceed. The drawing keeps its own coordinates; only the frame around it
+ * grows, which is why the bike still reads at 30 x 40 on screen.
+ */
+const CANVAS = Math.ceil(Math.hypot(100, 132));
+const PAD_X = (CANVAS - 100) / 2;
+const PAD_Y = (CANVAS - 132) / 2;
+
+/** The drawing's own centre, which is what it turns about. */
+const PIVOT = { x: 50, y: 66 };
+
+/*
+ * The square scaled so the drawing inside it still fits the 30 x 40 Mohan
+ * settled on against real tiles. A square canvas can only scale uniformly, and
+ * 30 x 40 is the drawing's own 100 x 132 proportion rounded, so the smaller of
+ * the two ratios keeps the bike inside the size that was agreed rather than a
+ * fraction over it.
+ */
+const RIDER_BOX = Math.round(CANVAS * Math.min(RIDER_W / 100, RIDER_H / 132));
+
+const riderIcon = (maps, heading = 0) => {
+    const turned = RIDER_SVG
+        .replace(
+            /<svg[^>]*>/,
+            '<svg xmlns="http://www.w3.org/2000/svg" width="' + CANVAS + '" height="' + CANVAS + '"'
+            + ' viewBox="' + -PAD_X + ' ' + -PAD_Y + ' ' + CANVAS + ' ' + CANVAS + '">'
+            + '<g transform="rotate(' + Math.round(heading) + ' ' + PIVOT.x + ' ' + PIVOT.y + ')">'
+        )
+        .replace(/<\/svg>\s*$/, "</g></svg>");
+
+    return {
+        url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(turned),
+        scaledSize: new maps.Size(RIDER_BOX, RIDER_BOX),
+
+        /*
+         * The pivot, which is now the middle of the square. A marker drawn
+         * from above sits on its position rather than pointing at it, so there
+         * is no tip to anchor - and anchoring anywhere but the point it turns
+         * about would make the bike swing around the road as it turned.
+         */
+        anchor: new maps.Point(RIDER_BOX / 2, RIDER_BOX / 2),
+    };
+};
 
 
 
@@ -337,6 +529,9 @@ const DASH = { path: "M 0,-1 0,1", strokeOpacity: 0.85, strokeWeight: 2.6, scale
  * happening. It matters most on the admin side, where a slow office
  * connection can leave this on screen for a second or two.
  */
+/** How long a followed map leaves the reader alone after they drag it. */
+const HANDS_OFF_MS = 10000;
+
 const MapSkeleton = () => (
     <div className="absolute inset-0 bg-sunken overflow-hidden" aria-hidden="true">
         <div className="absolute inset-0 animate-pulse">
@@ -361,6 +556,18 @@ const MapSkeleton = () => (
 const LocationMap = ({
     markers = [],
     encodedPolyline = null,
+
+    /*
+     * Keep the rider under the middle of the map instead of framing both ends
+     * once and leaving it there.
+     *
+     * The framed-once view is right for a dispatcher looking at a job, and
+     * wrong for a customer watching somebody approach: the frame is decided
+     * while the rider is kilometres away, and by the time he reaches the door
+     * the map still shows the whole city. Only the customer's own tracking
+     * page asks for this.
+     */
+    follow = false,
     /*
      * Street level, and deliberately not further.
      *
@@ -416,12 +623,39 @@ const LocationMap = ({
     };
     const markerRefs = useRef({});
     const hasFitRef = useRef(false);
+
+    // Which route the view has already been framed on.
+    const fittedRef = useRef(null);
     const [state, setState] = useState("loading");
 
     const first = markers[0];
     const markerSignature = markers
         .map((m) => (m.title || "") + ":" + m.lat + "," + m.lon + ":" + (m.color || ""))
         .join("|");
+
+    const vehicle = markers.find((m) => m.kind === "vehicle");
+
+    /*
+     * The rider placed on his route, and the route shortened to what is left.
+     *
+     * Worked out here, from the line already on screen, rather than asked of
+     * the server - so it happens on every fix that arrives instead of only
+     * when a fresh route is computed. That is the whole of "the line only cut
+     * when I reloaded": nothing was wrong with the updates, there was simply
+     * nothing in the page that shortened a line.
+     */
+    const geo = useMemo(() => {
+        if (!encodedPolyline) return { point: null, remaining: null, heading: null };
+
+        return snapToRoute(
+            decodePath(encodedPolyline),
+            vehicle ? { lat: vehicle.lat, lng: vehicle.lon } : null,
+        );
+        // The rider's coordinates, not the object holding them: `markers` is
+        // rebuilt by the parent on every render, so depending on the object
+        // would recompute this on renders where nothing has actually moved.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [encodedPolyline, vehicle?.lat, vehicle?.lon]);
 
     // Build the map once. Re-creating it on every prop change is what makes an
     // embedded map feel jumpy.
@@ -482,30 +716,100 @@ const LocationMap = ({
         const map = mapRef.current;
         if (state !== "ready" || !maps || !map) return;
 
-        if (lineRef.current) {
-            lineRef.current.setMap(null);
-            lineRef.current = null;
+        if (!encodedPolyline || !geo.remaining) {
+            if (lineRef.current) {
+                lineRef.current.setMap(null);
+                lineRef.current = null;
+            }
+            return;
         }
-        if (!encodedPolyline) return;
 
-        const path = maps.geometry.encoding.decodePath(encodedPolyline);
-        lineRef.current = new maps.Polyline({
-            map, path,
-            strokeColor: "#2563eb",
-            strokeOpacity: 0.9,
-            strokeWeight: 5,
-            zIndex: 1,
-        });
+        const path = geo.remaining;
+
+        /*
+         * Moved, not rebuilt.
+         *
+         * This line is redrawn on every fix now that it shortens as he rides,
+         * and tearing a polyline down to put an almost identical one back
+         * makes it blink each time. Setting the path leaves the same object
+         * on the map and simply changes where it goes.
+         */
+        if (lineRef.current) {
+            lineRef.current.setPath(path);
+        } else {
+            lineRef.current = new maps.Polyline({
+                map, path,
+                strokeColor: "#2563eb",
+                strokeOpacity: 0.9,
+                strokeWeight: 5,
+                zIndex: 1,
+            });
+        }
+
+        // Framed on the route once. Refitting as it shortens would creep the
+        // view in on the rider while somebody is looking at the far end of it.
+        if (follow || fittedRef.current === encodedPolyline) return;
+        fittedRef.current = encodedPolyline;
 
         const bounds = new maps.LatLngBounds();
-        path.forEach((p) => bounds.extend(p));
+        path.forEach((pt) => bounds.extend(pt));
         map.fitBounds(bounds, 30);
         lockAfterFit();
         hasFitRef.current = true;
         // lockAfterFit only reads refs and the lockZoom flag, neither of which
         // changes across a render in a way this effect should chase.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [encodedPolyline, state]);
+    }, [encodedPolyline, state, geo.remaining, follow]);
+
+    /*
+     * Following: the rider stays under the middle of the map.
+     *
+     * Held off while the customer is looking somewhere themselves - dragging
+     * hands control over, and ten quiet seconds hands it back. Taking it for
+     * good would strand somebody who nudged the map once at the start of a
+     * twenty minute ride; taking it back at once would make the map impossible
+     * to read at all.
+     */
+    const heldRef = useRef(false);
+    const releaseRef = useRef(null);
+
+    useEffect(() => {
+        const maps = mapsRef.current;
+        const map = mapRef.current;
+        if (!follow || state !== "ready" || !maps || !map) return undefined;
+
+        const hold = () => {
+            heldRef.current = true;
+            clearTimeout(releaseRef.current);
+            releaseRef.current = setTimeout(() => { heldRef.current = false; }, HANDS_OFF_MS);
+        };
+
+        const listener = map.addListener("dragstart", hold);
+
+        return () => {
+            listener.remove();
+            clearTimeout(releaseRef.current);
+        };
+    }, [follow, state]);
+
+    const followedRef = useRef(false);
+
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!follow || state !== "ready" || !map || !geo.point || heldRef.current) return;
+
+        // The zoom is set once. After that it is the centre that moves, so a
+        // locked map is never asked for a zoom it is not allowed to have.
+        if (!followedRef.current) {
+            followedRef.current = true;
+            map.setZoom(zoom);
+            lockAfterFit();
+        }
+
+        map.panTo({ lat: geo.point.lat, lng: geo.point.lng });
+        // lockAfterFit only reads refs and the lockZoom flag.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [follow, state, zoom, geo.point]);
 
     useEffect(() => () => {
         Object.values(markerRefs.current).forEach((m) => {
@@ -562,7 +866,16 @@ const LocationMap = ({
         markers.forEach((m, i) => {
             const key = m.title || "marker-" + i;
             seen.add(key);
-            const position = { lat: m.lat, lng: m.lon };
+            /*
+             * The rider goes where the route says, everybody else where their
+             * own coordinates say. A fix taken among buildings is routinely
+             * ten or twenty metres out, which at this zoom is the width of a
+             * house - enough to sit the bike in somebody's garden beside the
+             * road it is plainly travelling along.
+             */
+            const position = (m.kind === "vehicle" && geo.point)
+                ? { lat: geo.point.lat, lng: geo.point.lng }
+                : { lat: m.lat, lng: m.lon };
             /*
              * A bike for whoever is travelling, the waiting mark for whoever
              * has not set off, a pin for the place they are going. Anything
@@ -570,12 +883,20 @@ const LocationMap = ({
              * panel is untouched.
              */
             const iconFor = () => (m.kind === "vehicle"
-                ? riderIcon(maps)
+                ? riderIcon(maps, geo.heading ?? 0)
                 : m.kind === "waiting"
                     ? waitingIcon(maps)
                     : pinIcon(maps, m.color || "#2563eb"));
 
             const existing = markerRefs.current[key];
+
+            /*
+             * Compared the short way round. 359 and 1 degrees are two degrees
+             * apart, not three hundred and fifty eight, and a rider crossing
+             * due north must not redraw as if he had spun on the spot.
+             */
+            const turn = ((geo.heading ?? 0) - (existing?.heading ?? 0) + 540) % 360 - 180;
+            const heading = (existing?.heading ?? 0) + turn;
 
             if (existing) {
                 existing.marker.setPosition(position);
@@ -595,8 +916,25 @@ const LocationMap = ({
 
                     existing.marker.setIcon(iconFor());
                     existing.kind = m.kind;
+                    existing.heading = heading;
                     existing.pulse = m.kind === "waiting" ? startPulse(maps, existing.marker) : null;
+                    return;
                 }
+
+                /*
+                 * And turned, when the road has turned under him.
+                 *
+                 * The icon is a drawing rotated to a bearing, so a new angle
+                 * means a new image - and swapping the image on every fix,
+                 * for a bearing that has moved a fraction of a degree along a
+                 * straight road, makes the bike flicker. A couple of degrees
+                 * is below what anybody can see and well above GPS noise.
+                 */
+                if (m.kind === "vehicle" && Math.abs(heading - (existing.heading ?? 0)) >= 2) {
+                    existing.marker.setIcon(iconFor());
+                    existing.heading = heading;
+                }
+
                 return;
             }
 
@@ -613,6 +951,7 @@ const LocationMap = ({
             markerRefs.current[key] = {
                 marker,
                 kind: m.kind,
+                heading: geo.heading ?? 0,
                 pulse: m.kind === "waiting" ? startPulse(maps, marker) : null,
             };
         });
@@ -632,7 +971,7 @@ const LocationMap = ({
 
         // Frame the pins once. Refitting on every update would yank the view
         // back each time the live marker moved.
-        if (!hasFitRef.current && markers.length) {
+        if (!follow && !hasFitRef.current && markers.length) {
             if (markers.length === 1) {
                 map.setCenter({ lat: markers[0].lat, lng: markers[0].lon });
                 map.setZoom(zoom);
@@ -657,7 +996,7 @@ const LocationMap = ({
         // The array is rebuilt by the parent on every render, so depend on the
         // coordinates it carries rather than its identity.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [markerSignature, state, zoom]);
+    }, [markerSignature, state, zoom, geo.point, geo.heading, follow]);
 
     return (
         <div className={"w-full rounded-xl overflow-hidden border border-hairline bg-sunken relative " + className}>

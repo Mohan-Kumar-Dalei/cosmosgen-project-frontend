@@ -547,6 +547,29 @@ const TechnicianPanel = () => {
                         </div>
                     )}
 
+                    {/*
+                      * Paused for the rest of the day, after too many jobs
+                      * turned down. Above everything, because it explains every
+                      * refusal he is about to get from the server - going on
+                      * duty, accepting a job - and without it those read as the
+                      * panel being broken.
+                      */}
+                    {profile?.suspendedUntil && new Date(profile.suspendedUntil) > new Date() && (
+                        <div className="mb-4 p-4 bg-danger-tint border border-danger/30 rounded-xl">
+                            <p className="font-semibold text-danger">Paused for today</p>
+                            <p className="text-sm text-ink-soft mt-1">
+                                {profile.declines?.today
+                                    ? "You turned down " + profile.declines.today + " jobs today. "
+                                    : "Too many jobs were turned down today. "}
+                                You can work again from{" "}
+                                {new Date(profile.suspendedUntil).toLocaleString("en-IN", {
+                                    weekday: "long", hour: "numeric", minute: "2-digit", hour12: true,
+                                })}
+                                . Anything that was waiting has gone back to the office.
+                            </p>
+                        </div>
+                    )}
+
                     {tab === "active" && (
                         <>
                             <ProfileStrip profile={profile} />

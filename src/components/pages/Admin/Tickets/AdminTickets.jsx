@@ -288,6 +288,14 @@ const AdminTickets = () => {
                                                 <Wrench className="w-3 h-3" /> {t.technicianSnapshot.name}
                                             </span>
                                         )}
+                                        {/* Assigned is not the same as agreed to, and
+                                            the customer hears nothing until it is. */}
+                                        {t.technicianSnapshot?.name && !t.acceptedAt
+                                            && (t.status === "Assigned" || t.status === "Queued") && (
+                                            <span className="text-xs text-warn flex items-center gap-1">
+                                                <Clock className="w-3 h-3" /> Not accepted yet
+                                            </span>
+                                        )}
                                         {t.scheduling?.scheduledFor && (
                                             <span className="text-xs text-ink-soft flex items-center gap-1">
                                                 <Calendar className="w-3 h-3" />
@@ -659,6 +667,14 @@ const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
                                     <div className="flex items-center gap-1 text-sm text-ink-soft mt-1">
                                         <Phone className="w-3.5 h-3.5" /> {ticket.technicianSnapshot.phone}
                                     </div>
+
+                                    {!ticket.acceptedAt
+                                        && (ticket.status === "Assigned" || ticket.status === "Queued") && (
+                                        <p className="text-xs text-warn mt-2">
+                                            Waiting for them to accept. The customer has not
+                                            been told who is coming.
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
