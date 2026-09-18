@@ -1072,6 +1072,14 @@ const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
                                                         OFFLINE
                                                     </span>
                                                 )}
+                                                {/* Paused after too many jobs turned down today. He
+                                                    stays on the list so nobody wonders where he went,
+                                                    but he cannot be given work. */}
+                                                {tech.paused && (
+                                                    <span className="text-[10px] font-bold text-danger bg-danger-tint px-1.5 py-0.5 rounded shrink-0">
+                                                        PAUSED
+                                                    </span>
+                                                )}
                                             </div>
                                             {/*
                                               * Each fact stays whole; the row breaks between
@@ -1146,7 +1154,7 @@ const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
                                         </div>
                                         <button
                                             onClick={() => doAssign(tech, false)}
-                                            disabled={assigningId !== null || tech.liveStatus === "offline"}
+                                            disabled={assigningId !== null || tech.paused || tech.liveStatus === "offline"}
                                             className="cg-btn cg-btn-go shrink-0 px-3 py-2"
                                         >
                                             {assigningId === tech._id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Assign"}
