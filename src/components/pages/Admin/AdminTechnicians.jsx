@@ -583,6 +583,29 @@ const TechnicianDetail = ({ technicianId, onClose, onChanged }) => {
         }
     };
 
+    /*
+     * Ending a pause, from the one screen the office is already looking at.
+     *
+     * Five refusals in a day shut a vendor's app until the morning, and until
+     * now there was no way back except a script on somebody's laptop. The rule
+     * stays where it is - this is the office overriding it, never the vendor:
+     * a man who can lift his own punishment has not been punished.
+     *
+     * Today's count is cleared with it on the server, so he is not one refusal
+     * from being shut out again.
+     */
+    const handleUnpause = async () => {
+        setWorking(true);
+        setError("");
+        try {
+            const res = await api.post("/admin/technicians/" + technicianId + "/unpause");
+            onChanged(res.data.message);
+        } catch (err) {
+            setError(getErrorMessage(err, "Could not end this pause"));
+            setWorking(false);
+        }
+    };
+
     const handleUnblock = async () => {
         setWorking(true);
         setError("");
@@ -598,6 +621,7 @@ const TechnicianDetail = ({ technicianId, onClose, onChanged }) => {
     const isPending = tech?.approvalStatus === "pending";
     const isRejected = tech?.approvalStatus === "rejected";
     const isBlocked = tech?.isBlacklisted;
+    const isPaused = Boolean(tech?.suspendedUntil) && new Date(tech.suspendedUntil) > new Date();
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -630,6 +654,21 @@ const TechnicianDetail = ({ technicianId, onClose, onChanged }) => {
                                         )}
                                         <p className="text-xs text-danger mt-1">
                                             This phone number can't sign in or register again.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {isPaused && !isBlocked && (
+                                <div className="mb-4 p-3 bg-danger-tint border border-hairline rounded-xl flex items-start gap-2">
+                                    <Clock className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-semibold text-red-900">Paused for today</p>
+                                        <p className="text-xs text-danger mt-0.5">
+                                            Turned down {tech.declines?.today || 0} jobs today. Their app is
+                                            closed until {new Date(tech.suspendedUntil).toLocaleString("en-IN", {
+                                                weekday: "short", hour: "numeric", minute: "2-digit", hour12: true,
+                                            })}.
                                         </p>
                                     </div>
                                 </div>
@@ -863,6 +902,17 @@ const TechnicianDetail = ({ technicianId, onClose, onChanged }) => {
                                     >
                                         {working ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
                                         Unblock
+                                    </button>
+                                )}
+
+                                {isPaused && !isBlocked && (
+                                    <button
+                                        onClick={handleUnpause}
+                                        disabled={working}
+                                        className="cg-btn cg-btn-go flex-1 min-w-[140px]"
+                                    >
+                                        {working ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                                        End the pause
                                     </button>
                                 )}
 

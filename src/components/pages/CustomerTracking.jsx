@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api, getErrorMessage } from "../services/api";
 import { createTrackSocket } from "../services/socket";
 import LocationMap from "../ui/LocationMap";
+import { decodePath, snapToRoute } from "../services/route";
 import {
     Phone, MapPin, CheckCircle2, Loader2, AlertCircle, Navigation, RefreshCw,
 } from "lucide-react";
@@ -17,24 +18,93 @@ const LOGO = "https://ik.imagekit.io/ny6yinyut/cosmosgenLogo/cosmosgen-logo.png?
 /** How long the bike stands at the door before it is taken off the map. */
 const RIDER_LINGER_MS = 30000;
 
+/** Close enough to the door to count as standing at it rather than riding. */
+const AT_DOOR_METRES = 25;
+
 /** The index of "arrived" in STAGES, which is the stage the wait belongs to. */
 const ARRIVED = 2;
 
 const STAGES = [
-    { key: "assigned", label: "Assigned", line: "We have someone for this job." },
+    /*
+     * Not "Assigned", and not the vendor's name either.
+     *
+     * The office picking somebody is not a promise that somebody is coming -
+     * he may hand it straight back - so until he accepts the page says what is
+     * true and shows the arc from wherever he is without naming him. The same
+     * words as the app, on purpose.
+     */
+    { key: "assigned", label: "Finding somebody", line: "We are lining somebody up for this job." },
     { key: "on_the_way", label: "On the way", line: "They have set off towards you." },
     { key: "arrived", label: "Arrived", line: "They are at your address." },
     { key: "working", label: "Working", line: "The job is under way." },
     { key: "done", label: "Done", line: "The work is finished." },
 ];
 
-const minutesFrom = (etaSeconds, etaAt) => {
-    if (etaSeconds == null) return null;
-    // The stored ETA was true when it was computed. Counting down from that
-    // moment is closer to the truth than repeating the original number for
-    // twenty minutes, and it is what makes the figure feel alive.
-    const elapsed = etaAt ? (Date.now() - new Date(etaAt).getTime()) / 1000 : 0;
-    return Math.max(1, Math.round((etaSeconds - elapsed) / 60));
+/**
+ * How far and how long is left, measured from where the rider actually is.
+ *
+ * The server works both figures out when it computes the route, and again
+ * every five minutes - which is right, because each one is a billed call, but
+ * it meant the customer watched the same "12 min" and the same distance sit
+ * still while the bike plainly came closer. What is left of the drawn line is
+ * what is left of the journey, and trimming that line is something this page
+ * already does on every fix.
+ *
+ * The pace comes from the route Google worked out - its own distance over its
+ * own duration - so traffic and one-ways are still its answer; only the length
+ * remaining is measured here. With no route yet, the straight line to the door
+ * with a little added for the bends in roads is the honest approximation.
+ */
+const ROAD_FACTOR = 1.3;
+
+/** About 26 km/h, for when nothing has been routed yet. */
+const CITY_PACE = 1 / 7.2;
+
+const RAD = Math.PI / 180;
+
+const gapBetween = (a, b) => {
+    const k = Math.cos(((a.lat + b.lat) / 2) * RAD);
+    return Math.hypot((b.lng - a.lng) * k * 111320, (b.lat - a.lat) * 111320);
+};
+
+const lengthOf = (points) => {
+    if (!points || points.length < 2) return 0;
+    let total = 0;
+    for (let i = 1; i < points.length; i += 1) total += gapBetween(points[i - 1], points[i]);
+    return total;
+};
+
+const journeyLeft = (data) => {
+    const here = data?.technicianAt;
+    const there = data?.destination;
+
+    if (!here || there?.lat == null) return { metres: null, minutes: null };
+
+    const at = { lat: here.lat, lng: here.lon };
+    const line = data.ride?.encodedPolyline ? decodePath(data.ride.encodedPolyline) : [];
+    const ride = line.length > 1 ? snapToRoute(line, at) : null;
+
+    const metres = (ride?.remaining && ride.remaining.length > 1)
+        ? lengthOf(ride.remaining)
+        : gapBetween(at, { lat: there.lat, lng: there.lon }) * ROAD_FACTOR;
+
+    if (!metres) return { metres: null, minutes: null };
+
+    const etaSeconds = data.ride?.etaSeconds;
+    const distanceMeters = data.ride?.distanceMeters;
+    const pace = (etaSeconds > 0 && distanceMeters > 0) ? etaSeconds / distanceMeters : CITY_PACE;
+
+    return { metres, minutes: Math.max(1, Math.round((metres * pace) / 60)) };
+};
+
+/**
+ * Kilometres until it is close, then metres, because "0.3 km away" is not how
+ * anybody describes the end of a street.
+ */
+const distanceLabel = (metres) => {
+    if (metres == null) return null;
+    if (metres < 950) return Math.max(10, Math.round(metres / 10) * 10) + " m";
+    return (metres / 1000).toFixed(1) + " km";
 };
 
 const CustomerTracking = () => {
@@ -101,16 +171,28 @@ const CustomerTracking = () => {
                 return prev;
             });
 
+            /*
+             * Back to "assigned" means the job has changed hands - the office
+             * moved it, or the vendor handed it back. Everything worked out
+             * for the last rider goes with him rather than being drawn ahead
+             * of the next one.
+             */
+            const handedOver = p.stage === "assigned";
+            const keep = (now, before) => (now ?? null) || (handedOver ? null : before);
+
             setData((prev) => (prev ? {
                 ...prev,
                 stage: p.stage || prev.stage,
-                technicianAt: p.technicianAt || prev.technicianAt,
+                technicianAt: keep(p.technicianAt, prev.technicianAt),
+                technician: handedOver
+                    ? { name: null, phone: null, rating: null, photo: null }
+                    : (p.technician || prev.technician),
                 ride: {
                     ...prev.ride,
-                    etaSeconds: p.etaSeconds ?? prev.ride?.etaSeconds,
-                    etaAt: p.etaAt || prev.ride?.etaAt,
-                    distanceMeters: p.distanceMeters ?? prev.ride?.distanceMeters,
-                    encodedPolyline: p.encodedPolyline || prev.ride?.encodedPolyline,
+                    etaSeconds: handedOver ? null : (p.etaSeconds ?? prev.ride?.etaSeconds),
+                    etaAt: keep(p.etaAt, prev.ride?.etaAt),
+                    distanceMeters: handedOver ? null : (p.distanceMeters ?? prev.ride?.distanceMeters),
+                    encodedPolyline: keep(p.encodedPolyline, prev.ride?.encodedPolyline),
                 },
             } : prev));
         };
@@ -176,15 +258,33 @@ const CustomerTracking = () => {
      */
     const [lingered, setLingered] = useState(false);
 
+    /*
+     * And the wait starts at the door, not at the edge of the circle.
+     *
+     * "Arrived" is declared a hundred metres out, which is the honest distance
+     * to tell somebody their technician is here - but it is not where he
+     * stops. Starting the half minute there took the bike off the map while it
+     * was still riding up the street, which is the stretch the customer is
+     * really watching.
+     */
+    const toDoor = (data?.technicianAt && data?.destination?.lat != null)
+        ? gapBetween(
+            { lat: data.technicianAt.lat, lng: data.technicianAt.lon },
+            { lat: data.destination.lat, lng: data.destination.lon },
+        )
+        : null;
+
+    const atDoor = toDoor != null && toDoor <= AT_DOOR_METRES;
+
     useEffect(() => {
-        if (stageIndex !== ARRIVED) return undefined;
+        if (stageIndex !== ARRIVED || !atDoor) return undefined;
 
         const id = setTimeout(() => setLingered(true), RIDER_LINGER_MS);
 
         // Cleared on the way out as well as on unmount, so a job that is put
         // back to "on the way" gets its full wait again rather than none.
         return () => { clearTimeout(id); setLingered(false); };
-    }, [stageIndex]);
+    }, [stageIndex, atDoor]);
 
     const riderGone = stageIndex > ARRIVED || (stageIndex === ARRIVED && lingered);
 
@@ -221,7 +321,8 @@ const CustomerTracking = () => {
         return list.filter(Boolean);
     }, [data, riderGone]);
 
-    const eta = data ? minutesFrom(data.ride?.etaSeconds, data.ride?.etaAt) : null;
+    const left = journeyLeft(data);
+    const eta = left.minutes;
     void tick;
 
     if (loading) {
@@ -254,7 +355,7 @@ const CustomerTracking = () => {
     const headline = done ? "Job complete"
         : data.stage === "arrived" ? "At your door"
             : data.stage === "working" ? "Work under way"
-                : data.stage === "assigned" ? "Getting ready to leave"
+                : data.stage === "assigned" ? "Finding somebody"
                     : eta != null ? eta + " min away"
                         : "On the way";
 
@@ -367,8 +468,8 @@ const CustomerTracking = () => {
                                 <p className="font-semibold text-ink truncate">{data.technician.name}</p>
                                 <p className="text-xs text-ink-soft">
                                     {data.technician.rating ? data.technician.rating + " rating" : "Cosmosgen vendor"}
-                                    {data.ride?.distanceMeters != null && !done && (
-                                        <span> · {(data.ride.distanceMeters / 1000).toFixed(1)} km away</span>
+                                    {left.metres != null && !done && (
+                                        <span> · {distanceLabel(left.metres)} away</span>
                                     )}
                                 </p>
                             </div>
