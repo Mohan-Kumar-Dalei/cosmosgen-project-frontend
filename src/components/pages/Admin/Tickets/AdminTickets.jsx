@@ -865,7 +865,17 @@ const RADIUS_OPTIONS = [
 ];
 
 const AssignPanel = ({ ticket, onClose, onDone, onError }) => {
-    const [radius, setRadius] = useState(15000);
+    /*
+     * Five kilometres to begin with, not fifteen.
+     *
+     * The screen opens on the question the office actually asks first - who is
+     * round the corner - and only widens when the answer is nobody, or nobody
+     * free. Opening at fifteen answered a question nobody had asked yet: it
+     * filled the list with men across town, and every one of them near enough
+     * the top to be worth measuring by road, which is a bill for rows the
+     * office was never going to pick.
+     */
+    const [radius, setRadius] = useState(5000);
     const [loading, setLoading] = useState(true);
     const [technicians, setTechnicians] = useState([]);
     const [meta, setMeta] = useState(null);
