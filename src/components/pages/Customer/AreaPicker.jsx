@@ -1,6 +1,101 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MapPin, ChevronDown, Crosshair, Loader2, Search, X } from "lucide-react";
+import { api } from "../../services/api";
 import { useArea } from "./area";
+
+/** A fresh token, so Google bills a whole search as one session. */
+const newSession = () => (
+    typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : "s" + Date.now() + Math.random().toString(36).slice(2)
+);
+
+/**
+ * A town, chosen rather than typed.
+ *
+ * The box used to take anything at all and the server took it at its word: it
+ * title-cased whatever arrived and showed it back as the visitor's area, so
+ * "asdf" became Asdf, a place we apparently do not cover. Nothing was wrong
+ * with the answer - it was a real search that found nothing - but the question
+ * was nonsense and nobody said so.
+ *
+ * Now it asks the same suggestion list the vendor's own form uses, and only a
+ * row somebody picked is worth checking. Typing after picking un-picks, so a
+ * half-edited name cannot be submitted as though it had been chosen.
+ *
+ * The session token groups a whole search into one charge from Google rather
+ * than one per keystroke, exactly as it does on the vendor side.
+ */
+const useTowns = () => {
+    const [term, setTerm] = useState("");
+    const [list, setList] = useState([]);
+    const [picked, setPicked] = useState(null);
+    const [looking, setLooking] = useState(false);
+
+    const session = useRef(newSession());
+    const timer = useRef(null);
+    const alive = useRef(true);
+
+    useEffect(() => () => { alive.current = false; clearTimeout(timer.current); }, []);
+
+    const type = useCallback((value) => {
+        setTerm(value);
+        setPicked(null);
+        clearTimeout(timer.current);
+
+        if (value.trim().length < 2) {
+            setList([]);
+            setLooking(false);
+            return;
+        }
+
+        setLooking(true);
+        timer.current = setTimeout(() => {
+            api.get("/map/cities", { params: { q: value.trim(), session: session.current } })
+                .then((res) => { if (alive.current) setList(res.data.data || []); })
+                .catch(() => { if (alive.current) setList([]); })
+                .finally(() => { if (alive.current) setLooking(false); });
+        }, 300);
+    }, []);
+
+    const pick = useCallback((row) => {
+        setTerm(row.city);
+        setPicked(row);
+        setList([]);
+        // The chosen row closes the billing session; the next search starts a
+        // new one, which is what Google charges for.
+        session.current = newSession();
+    }, []);
+
+    const clear = useCallback(() => { setTerm(""); setPicked(null); setList([]); }, []);
+
+    return { term, list, picked, looking, type, pick, clear };
+};
+
+/** The suggestion list, shared by both shapes of the control. */
+const TownList = ({ rows, onPick, className = "" }) => {
+    if (!rows.length) return null;
+
+    return (
+        <ul className={"absolute z-50 w-full mt-1 rounded-2xl border border-hairline bg-surface shadow-lift max-h-56 overflow-y-auto " + className}>
+            {rows.map((row) => (
+                <li
+                    key={row.placeId || row.city + row.detail}
+                    onMouseDown={() => onPick(row)}
+                    className="px-3.5 py-2.5 hover:bg-sunken cursor-pointer flex gap-2.5 items-start transition-colors"
+                >
+                    <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                        <p className="text-[13.5px] font-medium text-ink truncate">{row.city}</p>
+                        {(row.detail || row.state) && (
+                            <p className="text-[11.5px] text-ink-faint mt-0.5 truncate">{row.detail || row.state}</p>
+                        )}
+                    </div>
+                </li>
+            ))}
+        </ul>
+    );
+};
 
 /**
  * The control that answers "do you even come to my street".
@@ -57,14 +152,15 @@ export const AreaPill = () => {
  */
 export const AreaForm = ({ onDone }) => {
     const { detect, search, status, error, place, known, total, radiusKm, forget } = useArea();
-    const [term, setTerm] = useState("");
+    const towns = useTowns();
 
     const busy = status === "locating" || status === "loading";
 
     const submit = async (e) => {
         e.preventDefault();
-        const ok = await search(term);
-        if (ok && onDone) onDone();
+        if (!towns.picked) return;
+        const ok = await search(towns.picked.city);
+        if (ok) { towns.clear(); if (onDone) onDone(); }
     };
 
     return (
@@ -124,18 +220,24 @@ export const AreaForm = ({ onDone }) => {
                   * panel, and the Check button was pushed off the right edge
                   * and clipped. It looked like the whole row had drifted left.
                   */}
-                <div className="min-w-0 flex-1 flex items-center gap-2 h-10 px-3 rounded-full border border-hairline-strong focus-within:border-accent transition-colors">
-                    <Search className="w-3.5 h-3.5 text-ink-faint shrink-0" />
-                    <input
-                        value={term}
-                        onChange={(e) => setTerm(e.target.value)}
-                        placeholder="Town or pincode"
-                        className="flex-1 min-w-0 bg-transparent text-[13.5px] outline-none placeholder:text-ink-faint"
-                    />
+                <div className="relative min-w-0 flex-1">
+                    <div className="flex items-center gap-2 h-10 px-3 rounded-full border border-hairline-strong focus-within:border-accent transition-colors">
+                        {towns.looking
+                            ? <Loader2 className="w-3.5 h-3.5 text-ink-faint shrink-0 animate-spin" />
+                            : <Search className="w-3.5 h-3.5 text-ink-faint shrink-0" />}
+                        <input
+                            value={towns.term}
+                            onChange={(e) => towns.type(e.target.value)}
+                            autoComplete="off"
+                            placeholder="Start typing a town"
+                            className="flex-1 min-w-0 bg-transparent text-[13.5px] outline-none placeholder:text-ink-faint"
+                        />
+                    </div>
+                    <TownList rows={towns.list} onPick={towns.pick} />
                 </div>
                 <button
                     type="submit"
-                    disabled={busy || !term.trim()}
+                    disabled={busy || !towns.picked}
                     className="shrink-0 h-10 px-4 rounded-full border border-hairline-strong text-[13px] font-semibold hover:bg-sunken disabled:opacity-50 transition-colors"
                 >
                     Check
@@ -163,7 +265,7 @@ export const AreaForm = ({ onDone }) => {
  */
 export const AreaBar = ({ onDark }) => {
     const { detect, search, status, error, place, known, total, radiusKm, covered, forget } = useArea();
-    const [term, setTerm] = useState("");
+    const towns = useTowns();
 
     const busy = status === "locating" || status === "loading";
 
@@ -196,7 +298,7 @@ export const AreaBar = ({ onDark }) => {
     return (
         <div>
             <form
-                onSubmit={(e) => { e.preventDefault(); search(term); }}
+                onSubmit={(e) => { e.preventDefault(); if (towns.picked) search(towns.picked.city); }}
                 className="flex items-center gap-1 rounded-full bg-surface shadow-lift p-1.5 max-w-lg"
             >
                 <button
@@ -213,16 +315,20 @@ export const AreaBar = ({ onDark }) => {
 
                 <span aria-hidden className="w-px h-6 bg-hairline shrink-0" />
 
-                <input
-                    value={term}
-                    onChange={(e) => setTerm(e.target.value)}
-                    placeholder="or type a town"
-                    className="flex-1 min-w-0 h-11 px-3 bg-transparent text-[14px] outline-none placeholder:text-ink-faint"
-                />
+                <div className="relative flex-1 min-w-0">
+                    <input
+                        value={towns.term}
+                        onChange={(e) => towns.type(e.target.value)}
+                        autoComplete="off"
+                        placeholder="or start typing a town"
+                        className="w-full h-11 px-3 bg-transparent text-[14px] outline-none placeholder:text-ink-faint"
+                    />
+                    <TownList rows={towns.list} onPick={towns.pick} />
+                </div>
 
                 <button
                     type="submit"
-                    disabled={busy || !term.trim()}
+                    disabled={busy || !towns.picked}
                     className="shrink-0 h-11 px-5 rounded-full bg-accent text-white text-[13.5px] font-semibold hover:bg-accent-deep disabled:opacity-40 transition-colors"
                 >
                     Check
