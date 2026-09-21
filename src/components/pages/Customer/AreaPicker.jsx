@@ -81,7 +81,24 @@ const TownList = ({ rows, onPick, className = "" }) => {
             {rows.map((row) => (
                 <li
                     key={row.placeId || row.city + row.detail}
-                    onMouseDown={() => onPick(row)}
+                    /*
+                     * Stopped here, or the panel around this list closes on
+                     * the way past.
+                     *
+                     * AreaPill watches mousedown on the document to shut
+                     * itself when somebody clicks away, and it decides that by
+                     * asking whether the clicked node is inside it. Picking a
+                     * row empties the list first, so by the time that check
+                     * runs the row has been unmounted - no longer inside
+                     * anything - and a click squarely on the suggestion read
+                     * as a click outside. The panel shut and nothing was
+                     * chosen.
+                     *
+                     * preventDefault keeps the focus in the box as well, so
+                     * the chosen name is there to edit rather than somewhere
+                     * the caret has left.
+                     */
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onPick(row); }}
                     className="px-3.5 py-2.5 hover:bg-sunken cursor-pointer flex gap-2.5 items-start transition-colors"
                 >
                     <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
