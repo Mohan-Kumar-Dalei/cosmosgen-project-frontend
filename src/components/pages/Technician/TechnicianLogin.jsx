@@ -31,7 +31,22 @@ const TechnicianLogin = () => {
         try {
             const res = await api.post('/technician/login', credentials);
             if (res.data.success) {
-                navigate('/vendor/admin');
+                /*
+                 * His own id in his own address.
+                 *
+                 * The route has always accepted one and the panel has always
+                 * ignored it, so whatever was in the bar was decoration - and
+                 * signing in put nothing there at all. The id the server just
+                 * sent back is the real one, so the address now says who is
+                 * looking at the page.
+                 *
+                 * It is still the token that decides what he sees. Typing
+                 * somebody else's id in shows him his own panel, because the
+                 * server answers for whoever's cookie arrived and never for
+                 * the number in the URL.
+                 */
+                const id = res.data.data?._id;
+                navigate(id ? '/vendor/admin/' + id : '/vendor/admin');
             }
         } catch (error) {
             const data = error.response?.data;
