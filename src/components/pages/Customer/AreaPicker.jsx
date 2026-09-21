@@ -105,18 +105,46 @@ const TownList = ({ rows, onPick, className = "" }) => {
      */
     useEffect(() => {
         const el = box.current;
-        if (!el || !rows.length) return;
+        if (!el || !rows.length) return undefined;
 
-        let floor = window.innerHeight;
-        for (let n = el.parentElement; n; n = n.parentElement) {
-            if (getComputedStyle(n).overflow !== "visible") {
-                floor = Math.min(floor, n.getBoundingClientRect().bottom);
-                break;
+        const decide = () => {
+            /*
+             * Every ancestor that clips, not the first one found.
+             *
+             * This stopped at the nearest one to begin with, which is the
+             * wrong answer whenever that one is roomy and something further
+             * out is not: the list measured itself against a box it fitted
+             * inside, decided it had space, opened downwards - and was cut in
+             * half by a section two levels above. The lowest edge of all of
+             * them is the only edge that matters.
+             */
+            let floor = window.innerHeight;
+            for (let n = el.parentElement; n; n = n.parentElement) {
+                if (getComputedStyle(n).overflow !== "visible") {
+                    floor = Math.min(floor, n.getBoundingClientRect().bottom);
+                }
             }
-        }
 
-        const top = el.getBoundingClientRect().top;
-        setUp(floor - top < el.offsetHeight + BREATHING);
+            /*
+             * Measured from the input rather than from the list, because the
+             * list has already moved once this is flipped - asking where it is
+             * now would flip it straight back on the next pass.
+             */
+            const anchor = el.parentElement?.getBoundingClientRect();
+            const below = floor - (anchor ? anchor.bottom : 0);
+
+            setUp(below < el.offsetHeight + BREATHING);
+        };
+
+        decide();
+
+        // Scrolling moves the clipping edges under it; resizing moves both.
+        window.addEventListener("resize", decide);
+        window.addEventListener("scroll", decide, true);
+        return () => {
+            window.removeEventListener("resize", decide);
+            window.removeEventListener("scroll", decide, true);
+        };
     }, [rows]);
 
     if (!rows.length) return null;
