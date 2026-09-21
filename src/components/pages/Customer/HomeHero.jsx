@@ -266,11 +266,14 @@ export const HomeHero = () => {
                 >
                     {/* The question standing between a visitor and everything
                         else, asked where a delivery app asks it */}
-                    <div className="w-full xl:mt-1 flex xl:justify-end">
+                    {/* Above the two buttons below it, so the suggestion
+                        list it opens is not covered by them - see PageHead,
+                        where the same thing happened with the trade strip. */}
+                    <div className="relative z-20 w-full xl:mt-1 flex xl:justify-end">
                         <AreaBar />
                     </div>
 
-                    <div className="flex flex-nowrap w-full xl:justify-end gap-2.5">
+                    <div className="relative z-10 flex flex-nowrap w-full xl:justify-end gap-2.5">
                         <a
                             href={WHATSAPP_LINK}
                             target="_blank"

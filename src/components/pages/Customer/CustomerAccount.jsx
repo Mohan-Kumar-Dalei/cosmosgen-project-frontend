@@ -13,6 +13,9 @@ import {
     Clock,
     CheckCircle2,
     UserRound,
+    ChevronDown,
+    Download,
+    Wrench,
 } from "lucide-react";
 import { WhatsAppMark } from "./Marks";
 import { api, getErrorMessage } from "../../services/api";
@@ -551,7 +554,12 @@ const rupees = (display) => Number(String(display || "0").replace(/[^0-9.]/g, ""
 
 const money = (amount) => amount.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
+/** How many finished jobs are drawn before the rest are asked for. */
+const FIRST_FEW = 15;
+
 const History = ({ jobs, query }) => {
+    const [limit, setLimit] = useState(FIRST_FEW);
+
     if (!jobs.length) {
         return (
             <>
@@ -569,9 +577,21 @@ const History = ({ jobs, query }) => {
 
     const spent = jobs.reduce((sum, job) => sum + rupees(job.bill?.totalDisplay), 0);
 
+    /*
+     * Only the most recent, until somebody asks for more.
+     *
+     * A customer of two years has a hundred of these, and the page was drawing
+     * every one - so the thing most people come back for, the newest job and
+     * its invoice, sat on top of a screen that scrolled for a minute. The
+     * count and the total above still speak for all of them; it is only the
+     * rows that wait.
+     */
+    const shown = jobs.slice(0, limit);
+    const more = jobs.length - shown.length;
+
     // Newest first, and the API already sorts them that way - this only groups
     const years = [];
-    jobs.forEach((job) => {
+    shown.forEach((job) => {
         const year = new Date(job.updatedAt || job.createdAt).getFullYear();
         const bucket = years.find((y) => y.year === year);
         if (bucket) bucket.jobs.push(job);
@@ -612,52 +632,170 @@ const History = ({ jobs, query }) => {
                     </div>
                 ))}
             </div>
+
+            {more > 0 && (
+                <button
+                    type="button"
+                    onClick={() => setLimit((n) => n + FIRST_FEW)}
+                    className="mt-4 w-full h-11 rounded-full bg-surface shadow-card text-[13.5px] font-semibold text-ink-soft hover:text-ink hover:shadow-lift transition-all"
+                >
+                    Show {Math.min(more, FIRST_FEW)} more
+                    <span className="text-ink-faint font-normal"> of {more}</span>
+                </button>
+            )}
         </>
     );
 };
 
+/**
+ * One finished job, and everything about it that a single line has no room for.
+ *
+ * The line answers "what did I spend, and when". Opening it answers the rest:
+ * what was wrong, what was actually done, who came, and where the invoice is.
+ * All of that already arrives with the list, so this costs no second request -
+ * it was being thrown away at render.
+ *
+ * A row that opens rather than a page or a dialog, because the question people
+ * come here with is usually a comparison - which of these two was the geyser -
+ * and both answers should be readable without losing the list.
+ */
 const HistoryRow = ({ job }) => {
+    const [open, setOpen] = useState(false);
     const cancelled = job.status === "Cancelled";
 
+    const when = new Date(job.updatedAt || job.createdAt);
+    const issues = (job.selectedIssues || []).filter(Boolean);
+
     return (
-        <div className="group flex items-center gap-4 px-5 sm:px-6 py-4 border-t border-hairline first:border-0 transition-colors hover:bg-sunken/60">
-            <div className="w-[52px] shrink-0 text-center">
-                <p className="font-display font-bold text-[17px] leading-none tabular-nums">
-                    {new Date(job.updatedAt || job.createdAt).getDate()}
-                </p>
-                <p className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.1em] text-ink-faint">
-                    {new Date(job.updatedAt || job.createdAt).toLocaleString("en-IN", { month: "short" })}
-                </p>
-            </div>
+        <div className="border-t border-hairline first:border-0">
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                className="group w-full flex items-center gap-4 px-5 sm:px-6 py-4 text-left transition-colors hover:bg-sunken/60"
+            >
+                <div className="w-[52px] shrink-0 text-center">
+                    <p className="font-display font-bold text-[17px] leading-none tabular-nums">
+                        {when.getDate()}
+                    </p>
+                    <p className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+                        {when.toLocaleString("en-IN", { month: "short" })}
+                    </p>
+                </div>
 
-            <div className="min-w-0 flex-1">
-                <p className="font-semibold text-[14.5px] truncate">{job.serviceLabel}</p>
-                <p className="mt-0.5 text-[12.5px] text-ink-faint truncate">
-                    {job.ticketNumber}
-                    {job.technician ? " · " + job.technician.name : ""}
-                    {job.bill?.invoiceNumber ? " · " + job.bill.invoiceNumber : ""}
-                </p>
-            </div>
+                <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[14.5px] truncate">{job.serviceLabel}</p>
+                    <p className="mt-0.5 text-[12.5px] text-ink-faint truncate">
+                        {job.ticketNumber}
+                        {job.technician ? " \u00b7 " + job.technician.name : ""}
+                        {job.bill?.invoiceNumber ? " \u00b7 " + job.bill.invoiceNumber : ""}
+                    </p>
+                </div>
 
-            <div className="shrink-0 text-right">
-                {cancelled ? (
-                    <span className="text-[12px] font-semibold text-ink-faint">Cancelled</span>
-                ) : job.bill ? (
-                    <>
-                        <p className="font-display font-bold text-[16px] tabular-nums tracking-[-0.02em]">
-                            &#8377;{job.bill.totalDisplay}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-ink-faint capitalize">
-                            {job.bill.method || "paid"}
-                        </p>
-                    </>
-                ) : (
-                    <span className="text-[12px] text-ink-faint">No bill</span>
-                )}
-            </div>
+                <div className="shrink-0 text-right">
+                    {cancelled ? (
+                        <span className="text-[12px] font-semibold text-ink-faint">Cancelled</span>
+                    ) : job.bill ? (
+                        <>
+                            <p className="font-display font-bold text-[16px] tabular-nums tracking-[-0.02em]">
+                                &#8377;{job.bill.totalDisplay}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-ink-faint capitalize">
+                                {job.bill.method || "paid"}
+                            </p>
+                        </>
+                    ) : (
+                        <span className="text-[12px] text-ink-faint">No bill</span>
+                    )}
+                </div>
+
+                <ChevronDown
+                    className={"w-4 h-4 shrink-0 text-ink-faint transition-transform duration-300 "
+                        + (open ? "rotate-180" : "group-hover:translate-y-0.5")}
+                />
+            </button>
+
+            {open && (
+                <div className="px-5 sm:px-6 pb-5 -mt-1">
+                    <div className="rounded-2xl bg-sunken/70 p-4 sm:p-5 space-y-4">
+                        {cancelled && job.cancelReason && (
+                            <Detail label="Why it was called off" value={job.cancelReason} />
+                        )}
+
+                        {(job.problemDescription || issues.length > 0) && (
+                            <Detail
+                                label="What you reported"
+                                value={job.problemDescription || issues.join(", ")}
+                            />
+                        )}
+
+                        {job.bill?.workDone && (
+                            <Detail label="What was done" value={job.bill.workDone} icon={Wrench} />
+                        )}
+
+                        {job.technician && (
+                            <div className="flex items-center gap-3">
+                                {job.technician.photo ? (
+                                    <img src={job.technician.photo} alt="" className="w-9 h-9 rounded-full object-cover" />
+                                ) : (
+                                    <span className="w-9 h-9 rounded-full bg-surface grid place-items-center text-xs font-bold text-ink-soft">
+                                        {job.technician.name.charAt(0)}
+                                    </span>
+                                )}
+                                <div className="text-[13.5px] min-w-0">
+                                    <p className="font-semibold text-ink truncate">{job.technician.name}</p>
+                                    <p className="text-ink-faint">Did this job</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12.5px] text-ink-soft">
+                            <span>
+                                Booked{" "}
+                                <span className="text-ink font-medium">
+                                    {new Date(job.createdAt).toLocaleDateString("en-IN", {
+                                        day: "numeric", month: "short", year: "numeric",
+                                    })}
+                                </span>
+                            </span>
+
+                            {job.bill && (
+                                <span>
+                                    {job.bill.paid ? "Paid" : "Payment pending"}
+                                    {job.bill.method ? " \u00b7 " : ""}
+                                    <span className="capitalize">{job.bill.method || ""}</span>
+                                </span>
+                            )}
+                        </div>
+
+                        {job.bill?.pdfUrl && (
+                            <a
+                                href={job.bill.pdfUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-surface shadow-card text-[13px] font-semibold hover:shadow-lift transition-shadow"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                Invoice {job.bill.invoiceNumber}
+                            </a>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
+/** One labelled line inside an opened job. */
+const Detail = ({ label, value, icon: Icon }) => (
+    <div>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">{label}</p>
+        <p className="mt-1 text-[13.5px] text-ink leading-relaxed flex gap-2">
+            {Icon && <Icon className="w-3.5 h-3.5 shrink-0 mt-[3px] text-ink-faint" />}
+            <span>{value}</span>
+        </p>
+    </div>
+);
 
 const JobCard = ({ job, live }) => {
     const stage = STAGE[job.status] || { label: job.status, tone: "bg-sunken text-ink-soft" };

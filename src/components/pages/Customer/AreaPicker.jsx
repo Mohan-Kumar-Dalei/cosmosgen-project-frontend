@@ -72,13 +72,62 @@ const useTowns = () => {
     return { term, list, picked, looking, type, pick, clear };
 };
 
-/** The suggestion list, shared by both shapes of the control. */
+/**
+ * The suggestion list, shared by both shapes of the control.
+ *
+ * Four rows and no scrollbar, which is a layout decision rather than a taste
+ * one. Both heroes this sits in clip their own overflow so a bleeding drawing
+ * stays inside its section, and a list long enough to reach past the section
+ * is simply cut off at the edge - the fifth suggestion was being sliced in
+ * half by the band below. Four fits, and nobody reads past four names anyway.
+ */
+const SHOW_AT_MOST = 4;
+
+/** Room to leave between the list and whatever would cut it off. */
+const BREATHING = 8;
+
 const TownList = ({ rows, onPick, className = "" }) => {
+    const box = useRef(null);
+    const [up, setUp] = useState(false);
+
+    /*
+     * Opened upwards when there is no room to open downwards.
+     *
+     * Both heroes this sits in are `overflow-clip`, so a list that reaches
+     * past the section is not merely overlapped - it is cut off and the rows
+     * below the fold cannot even be clicked. On the home page the bar sits
+     * near the bottom of its section with about ninety pixels under it, which
+     * is less than two rows, so the list has to go the other way.
+     *
+     * Measured against whatever actually clips - the nearest ancestor that is
+     * not `overflow: visible` - rather than against the window, because the
+     * window is not what is in the way here.
+     */
+    useEffect(() => {
+        const el = box.current;
+        if (!el || !rows.length) return;
+
+        let floor = window.innerHeight;
+        for (let n = el.parentElement; n; n = n.parentElement) {
+            if (getComputedStyle(n).overflow !== "visible") {
+                floor = Math.min(floor, n.getBoundingClientRect().bottom);
+                break;
+            }
+        }
+
+        const top = el.getBoundingClientRect().top;
+        setUp(floor - top < el.offsetHeight + BREATHING);
+    }, [rows]);
+
     if (!rows.length) return null;
 
     return (
-        <ul className={"absolute z-50 w-full mt-1 rounded-2xl border border-hairline bg-surface shadow-lift max-h-56 overflow-y-auto " + className}>
-            {rows.map((row) => (
+        <ul
+            ref={box}
+            className={"absolute z-50 left-0 w-full min-w-[240px] rounded-2xl border border-hairline bg-surface shadow-lift py-1 overflow-hidden "
+                + (up ? "bottom-full mb-1.5 " : "top-full mt-1.5 ") + className}
+        >
+            {rows.slice(0, SHOW_AT_MOST).map((row) => (
                 <li
                     key={row.placeId || row.city + row.detail}
                     /*
@@ -99,7 +148,7 @@ const TownList = ({ rows, onPick, className = "" }) => {
                      * the caret has left.
                      */
                     onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onPick(row); }}
-                    className="px-3.5 py-2.5 hover:bg-sunken cursor-pointer flex gap-2.5 items-start transition-colors"
+                    className="px-3.5 py-2.5 hover:bg-sunken cursor-pointer flex gap-2.5 items-start transition-colors first:rounded-t-xl last:rounded-b-xl"
                 >
                     <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
                     <div className="min-w-0">

@@ -85,10 +85,20 @@ export const PageHead = ({ eyebrow, title, lede, art, band, foot, children }) =>
                     </p>
                 )}
 
-                {children && <div data-hero-line className="mt-9">{children}</div>}
+                {/*
+                  * The two rows below are ordered on purpose.
+                  *
+                  * Both are animated, and an animated element gets a stacking
+                  * context of its own - so between these two the later one in
+                  * the markup paints on top, whatever z-index sits inside it.
+                  * The area box hangs a suggestion list below itself, and the
+                  * strip of trades underneath was covering it: a real list,
+                  * drawn, with pills sitting across its second line.
+                  */}
+                {children && <div data-hero-line className="relative z-20 mt-9">{children}</div>}
 
                     {foot && (
-                        <div data-hero-line className="mt-10 flex flex-wrap gap-2.5">
+                        <div data-hero-line className="relative z-10 mt-10 flex flex-wrap gap-2.5">
                             {foot}
                         </div>
                     )}
