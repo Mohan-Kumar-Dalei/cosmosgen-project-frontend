@@ -60,7 +60,24 @@ const TechnicianProfile = () => {
     const [areaFor, setAreaFor] = useState({ city: "", term: "", list: [] });
     const areaSession = useRef(newSession());
 
-    const areaList = areaFor.city === String(techProfile.city || "")
+    /*
+     * Nothing is looked up until he actually types in the box.
+     *
+     * The page loads his saved area into the field, and that alone used to set
+     * the search going: the list opened by itself, over the bank details below
+     * it, offering him four ways to spell the address he already has. He never
+     * asked a question and was handed an answer.
+     *
+     * It was also a Places call on every single visit to this page, for a
+     * search nobody ran - his own area, typed back at him by the server.
+     *
+     * The field keeps its value, because the saved area is what he came to
+     * read and what gets sent back on save. Only the asking waits.
+     */
+    const [areaTyped, setAreaTyped] = useState(false);
+
+    const areaList = areaTyped
+        && areaFor.city === String(techProfile.city || "")
         && areaFor.term === String(techProfile.area || "")
         ? areaFor.list
         : [];
@@ -86,6 +103,7 @@ const TechnicianProfile = () => {
         const term = String(techProfile.area || "").trim();
 
         if (!city) return undefined;
+        if (!areaTyped) return undefined;
         if (areaFor.city === city && areaFor.term === term) return undefined;
 
         let alive = true;
@@ -96,7 +114,7 @@ const TechnicianProfile = () => {
         }, 300);
 
         return () => { alive = false; clearTimeout(wait); };
-    }, [techProfile.city, techProfile.area, areaFor.city, areaFor.term]);
+    }, [techProfile.city, techProfile.area, areaFor.city, areaFor.term, areaTyped]);
 
     // Locality and pincode travel together. A Google prediction needs one
     // details lookup for its pincode - the call that also closes the session.
@@ -212,6 +230,11 @@ const TechnicianProfile = () => {
         setShowSuggestions(false);
         setSuggestions([]);
         setTechProfile(prev => ({ ...prev, city: town.city, area: '' }));
+
+        // Changing the town empties the area below it, and he has to pick a
+        // new one - so here the list opening on its own is the help he wants,
+        // not the interruption it is on arrival.
+        setAreaTyped(true);
 
         if (town.state) {
             setTechProfile(prev => ({
@@ -429,7 +452,7 @@ const TechnicianProfile = () => {
                                     type="text"
                                     name="area"
                                     value={techProfile.area || ''}
-                                    onChange={handleChange}
+                                    onChange={(e) => { setAreaTyped(true); handleChange(e); }}
                                     autoComplete="off"
                                     placeholder="Start typing - e.g. Palasuni"
                                     className="cg-input font-medium"
