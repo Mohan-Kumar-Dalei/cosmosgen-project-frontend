@@ -96,6 +96,27 @@ const MovedToVendor = () => {
     return <Navigate to={moved + search + hash} replace />;
 };
 
+/*
+ * The id in a vendor's own address never meant anything, so it goes.
+ *
+ * `/vendor/admin/:id` looks like it shows that vendor, and it does not - the
+ * page never reads the id. It asks the server for "me" and the server answers
+ * for whoever's token arrived, so the panel has always shown the person
+ * looking at it whatever number was in the bar. Nothing leaked; what it did do
+ * was invite the thought that something might, and leave a vendor looking at
+ * somebody else's id above their own wallet.
+ *
+ * Redirected rather than removed, because those addresses are out in the world
+ * already - carried here from /technician/admin by the rule above, and sitting
+ * in bookmarks. They land on the same page they always did, with the number
+ * dropped on the way in.
+ */
+const DropVendorId = () => {
+    const { pathname, search, hash } = useLocation();
+    const clean = pathname.endsWith("/profile") ? "/vendor/admin/profile" : "/vendor/admin";
+    return <Navigate to={clean + search + hash} replace />;
+};
+
 const AppRouter = () => {
     return (
         <>
@@ -161,9 +182,9 @@ const AppRouter = () => {
                         <Route path="/vendor/admin/register" element={<TechnicianRegister />} />
                         <Route path="/vendor/admin/login" element={<TechnicianLogin />} />
                         <Route path="/vendor/admin/profile" element={<TechnicianProfile />} />
-                        <Route path="/vendor/admin/:id/profile" element={<TechnicianProfile />} />
+                        <Route path="/vendor/admin/:id/profile" element={<DropVendorId />} />
                         <Route path="/vendor/admin" element={<TechnicianPanel />} />
-                        <Route path="/vendor/admin/:id" element={<TechnicianPanel />} />
+                        <Route path="/vendor/admin/:id" element={<DropVendorId />} />
 
                         {/* Where the panel used to live.
                             Links to it are already out in the world - in
