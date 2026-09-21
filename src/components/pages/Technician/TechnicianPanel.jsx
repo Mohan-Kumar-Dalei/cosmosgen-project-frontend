@@ -570,10 +570,37 @@ const TechnicianPanel = () => {
                         </div>
                     )}
 
+                    {/*
+                        A technician with nothing in hand is the ordinary case,
+                        not an error.
+
+                        ActiveJobCard reads into the ticket on its first line,
+                        and there is no ticket for most of a working day -
+                        between jobs, before the first one, and for anybody
+                        just approved. Rendered with null it threw "Cannot read
+                        properties of null (reading 'acceptedAt')" and took the
+                        whole panel down with it: a blank screen and no way
+                        back but a reload. This is the tab the panel opens on,
+                        so it was the worst one to lose.
+
+                        Guarded here rather than inside the card, because the
+                        card's own hooks would have to run either way and an
+                        early return above them is a different bug.
+                    */}
                     {tab === "active" && (
                         <>
                             <ProfileStrip profile={profile} />
-                            <ActiveJobCard ticket={activeTicket} onUpdate={loadBootstrap} techPos={techPos} visitChargePaise={data?.visitChargePaise} />
+                            {activeTicket ? (
+                                <ActiveJobCard ticket={activeTicket} onUpdate={loadBootstrap} techPos={techPos} visitChargePaise={data?.visitChargePaise} />
+                            ) : (
+                                <div className="cg-card p-10 lg:p-16 text-center">
+                                    <Briefcase className="w-8 h-8 text-ink-faint mx-auto mb-2" />
+                                    <p className="font-semibold text-ink">No job in hand</p>
+                                    <p className="text-sm text-ink-soft mt-1">
+                                        The office will send one through. Stay on duty and it turns up here.
+                                    </p>
+                                </div>
+                            )}
                         </>
                     )}
 
