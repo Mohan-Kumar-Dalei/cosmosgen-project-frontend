@@ -90,7 +90,9 @@ const WalletsPanel = ({ refreshSignal, onSettled, focusTechnicianId, onFocusHand
                             <p className="text-sm font-medium text-white/60">To pay vendors</p>
                         </div>
                         <p className="text-2xl font-bold">Rs {summary.owedToTechniciansDisplay}</p>
-                        <p className="text-xs text-white/50 mt-1">{owed.length} people</p>
+                        <p className="text-xs text-white/50 mt-1">
+                            {owed.length} {owed.length === 1 ? "person" : "people"} waiting to be paid
+                        </p>
                     </div>
 
                     <div className="cg-card p-5">
@@ -99,30 +101,18 @@ const WalletsPanel = ({ refreshSignal, onSettled, focusTechnicianId, onFocusHand
                             <p className="text-sm font-medium text-ink-soft">To collect from vendors</p>
                         </div>
                         <p className="cg-h1">Rs {summary.owedByTechniciansDisplay}</p>
-                        <p className="text-xs text-ink-faint mt-1">{owes.length} people, mostly cash jobs</p>
+                        <p className="text-xs text-ink-faint mt-1">
+                            {owes.length} {owes.length === 1 ? "person" : "people"} to collect from, mostly cash jobs
+                        </p>
                     </div>
 
                     {/*
-                        This is the balance with the vendors, not what the
-                        company earned - and it used to be called "Net
-                        position", which reads as the second one. It showed
-                        zero when every wallet was square, which is correct
-                        and looked broken. What the company keeps is on the
-                        Analytics screen, under Net company commission.
+                        There used to be a third card here, netting the two
+                        above into one figure. It said the same thing twice -
+                        the two numbers beside it already are the position -
+                        and it had to be read as a subtraction to mean
+                        anything. Taken out rather than renamed again.
                     */}
-                    <div className="cg-card p-5">
-                        <p className="text-sm font-medium text-ink-soft mb-1">Balance with vendors</p>
-                        <p className="cg-h1">
-                            {summary.netDirection === "settled" ? "All square" : "Rs " + summary.netDisplay}
-                        </p>
-                        <p className="text-xs text-ink-faint mt-1">
-                            {summary.netDirection === "company_owes"
-                                ? "Company owes this much once everyone is paid"
-                                : summary.netDirection === "vendors_owe"
-                                    ? "Vendors owe this much once everyone has paid"
-                                    : "Nobody owes anybody anything"}
-                        </p>
-                    </div>
 
                     {/* Not money owed - money already taken, waiting for
                         someone to confirm the figure was right. It sits apart
@@ -135,7 +125,7 @@ const WalletsPanel = ({ refreshSignal, onSettled, focusTechnicianId, onFocusHand
                         <p className="cg-h1">Rs {summary.visitsPendingDisplay}</p>
                         <p className="text-xs text-ink-faint mt-1">
                             {summary.visitsPendingCount > 0
-                                ? summary.visitsPendingCount + " trip" + (summary.visitsPendingCount === 1 ? "" : "s") + ", nothing owed, just confirm the amount"
+                                ? summary.visitsPendingCount + " trip" + (summary.visitsPendingCount === 1 ? "" : "s") + " - nothing to collect, just confirm the amount"
                                 : "All checked"}
                         </p>
                     </div>

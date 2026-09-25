@@ -302,17 +302,24 @@ const AdminPayments = () => {
                             tone="amber"
                             hint="settle under Wallet"
                         />
+                        {/* Every method, not just the gateway. These two read
+                            `online` only, so a cash bill the customer had not
+                            paid never showed as awaiting and a verified cash
+                            job never showed as verified - the office was
+                            reading a figure that quietly left out most of
+                            the business. */}
                         <SummaryCard
                             label="Verified"
-                            value={summary.online?.verified?.amountDisplay}
-                            count={summary.online?.verified?.count}
+                            value={summary.all?.verified?.amountDisplay}
+                            count={summary.all?.verified?.count}
                             tone="green"
                         />
                         <SummaryCard
                             label="Awaiting payment"
-                            value={summary.online?.pending?.amountDisplay}
-                            count={summary.online?.pending?.count}
+                            value={summary.all?.pending?.amountDisplay}
+                            count={summary.all?.pending?.count}
                             tone="gray"
+                            hint="customer has not paid yet"
                         />
                     </div>
 
@@ -425,7 +432,7 @@ const EarningsStrip = ({ earnings }) => (
                 <span className="text-white/50">Gateway · vendor side</span>
                 <span className="text-right font-semibold tabular-nums">Rs {earnings.technicianGatewayDisplay}</span>
                 <span className="text-white/40 col-span-2 pt-1 border-t border-white/10">
-                    Razorpay {earnings.gatewayPercent}% + 18% GST on the fee
+                    Gateway fee {earnings.gatewayPercent}% + 18% GST
                 </span>
             </div>
         </div>
@@ -763,9 +770,7 @@ const SettlementBreakdown = ({ settlement: s }) => {
                     reported it - so the label only claims to be the rate
                     while the number is still our estimate. */}
                 <Figure
-                    label={s.gatewayIsEstimate
-                        ? "Razorpay " + s.gatewayPercent + "% + " + s.gatewayGstPercent + "% GST"
-                        : "Razorpay took"}
+                    label={"Gateway fee " + s.gatewayPercent + "% + " + s.gatewayGstPercent + "% GST"}
                     value={"-" + s.gatewayTotalDisplay}
                     tone="red"
                     note={s.gatewayIsEstimate ? "estimate, until the commission comes in" : null}
@@ -971,9 +976,9 @@ const InvoiceModal = ({ payment, onClose }) => {
                                         muted
                                     />
                                     <Line
-                                        label={s.gatewayIsEstimate
-                                            ? "Razorpay fee (" + s.gatewayPercent + "% + " + s.gatewayGstPercent + "% GST, estimated)"
-                                            : "Razorpay fee (what the gateway actually took)"}
+                                        label={"Gateway fee " + s.gatewayPercent + "% + "
+                                            + s.gatewayGstPercent + "% GST"
+                                            + (s.gatewayIsEstimate ? ", estimated" : "")}
                                         value={"-" + s.gatewayTotalDisplay}
                                         tone="red"
                                     />

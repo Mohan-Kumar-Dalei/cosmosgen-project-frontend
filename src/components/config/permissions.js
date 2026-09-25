@@ -11,8 +11,12 @@ export const PERMISSIONS = {
     // Seeing balances helps the backoffice answer technician questions
     VIEW_WALLETS: ["backoffice", "superadmin"],
 
-    // Owner only - anything that moves money or changes who has access
-    SETTLE_WALLET: ["superadmin"],
+    // Recording what a vendor has handed back is the office's daily work,
+    // and it is the same people who check the reference at the gateway.
+    // Paying a vendor out is still the owner's.
+    SETTLE_WALLET: ["backoffice", "superadmin"],
+
+    // Owner only - anything that moves money outwards or changes access
     BLOCK_TECHNICIAN: ["superadmin"],
     FORCE_CLOSE: ["superadmin"],
     MANAGE_STAFF: ["superadmin"],
