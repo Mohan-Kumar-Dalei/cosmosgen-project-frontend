@@ -30,8 +30,12 @@ const EMPTY_COUNTS = {
     paymentsToVerify: 0,
     paymentsCash: 0,
     paymentsOnline: 0,
+    paymentsSplit: 0,
     paymentsVisits: 0,
     wallets: 0,
+
+    // Vendors
+    techniciansPending: 0,
 };
 
 export const AdminDataProvider = ({ children }) => {

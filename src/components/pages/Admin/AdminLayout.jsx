@@ -195,11 +195,24 @@ const AdminLayout = ({ children }) => {
             label: "Tickets",
             icon: Ticket,
             permission: "VIEW_TICKETS",
-            // New requests plus the ones that came back - both are waiting on
-            // somebody at the desk. The rest of the tabs are work already
-            // moving, and putting those on the sidebar made the number look
-            // alarming when there was nothing to do.
-            badge: (counts.ticketsNew || 0) + (counts.ticketsReturned || 0),
+            /*
+             * Every tab on that screen, added up.
+             *
+             * This used to be new requests plus returned ones only, on the
+             * argument that the rest is work already moving. In practice it
+             * made the sidebar disagree with the screen it opens: five tabs
+             * carrying numbers, and a nav item quoting two of them. Whoever is
+             * at the desk reads the nav number as "how much is in Tickets", so
+             * that is what it now says, and the tabs underneath say where.
+             *
+             * The five are disjoint - a ticket is new, or returned, or queued,
+             * or booked for a date, or running - so nothing is counted twice.
+             */
+            badge: (counts.ticketsNew || 0)
+                + (counts.ticketsReturned || 0)
+                + (counts.ticketsQueued || 0)
+                + (counts.ticketsScheduled || 0)
+                + (counts.ticketsActive || 0),
         },
         {
             to: `${basePath}/technicians`,
@@ -215,12 +228,27 @@ const AdminLayout = ({ children }) => {
             label: "Payments",
             icon: Wallet,
             permission: canSeePayments ? "VIEW_PAYMENTS" : "VIEW_WALLETS",
-            // Wallets belong in here. Checking a cash bill and recording the
-            // commission that came back for it are two separate jobs, and
-            // leaving the second one out meant the sidebar went quiet the
-            // moment a bill was verified - while the money it represents was
-            // still sitting unrecorded on the wallet tab.
-            badge: (counts.paymentsToVerify || 0) + (counts.paymentsOnline || 0) + (counts.wallets || 0),
+            /*
+             * Every bill waiting to be checked, plus every wallet to settle.
+             *
+             * Wallets belong in here: checking a cash bill and recording the
+             * commission that came back for it are two separate jobs, and
+             * leaving the second one out meant the sidebar went quiet the
+             * moment a bill was verified - while the money it represents was
+             * still sitting unrecorded on the wallet tab.
+             *
+             * `paymentsToVerify` already covers cash, UPI and split together,
+             * so the three are not added again here. Until the server started
+             * sending it, this line added an undefined to the online figure and
+             * called it a total - which is why one split and three cash bills
+             * could sit there with the sidebar quoting only the two UPI ones.
+             *
+             * Visits are left out on purpose. That tab is a view across the
+             * other three, not a queue beside them: a visit charge taken in
+             * notes is a cash bill that also shows under Visits, and adding it
+             * would count one trip twice.
+             */
+            badge: (counts.paymentsToVerify || 0) + (counts.wallets || 0),
         },
         { to: `${basePath}/services`, label: "Pricing", icon: Package, permission: "MANAGE_PRICING" },
         // The owner's own controls, gathered: what the company sells, what it

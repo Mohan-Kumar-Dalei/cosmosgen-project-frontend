@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Boxes, Images, SlidersHorizontal } from "lucide-react";
+import { Boxes, Images, Megaphone, SlidersHorizontal } from "lucide-react";
 import AdminLayout from "./AdminLayout";
 import ServiceCatalogPanel from "./ServiceCatalogPanel";
 import SitePicturesPanel from "./SitePicturesPanel";
+import AnnouncementsPanel from "./AnnouncementsPanel";
 import OwnerSettingsCard from "./OwnerSettingsCard";
 import { useAdminAuth } from "./adminAuthContext";
 
@@ -32,6 +33,12 @@ const TABS = [
         label: "Pictures",
         icon: Images,
         note: "Every picture the customer site shows, with the link it loads from. Paste an ImageKit URL or upload a file.",
+    },
+    {
+        id: "posts",
+        label: "App posts",
+        icon: Megaphone,
+        note: "The posters on the app's home screen and the notices that go to every phone. Send cannot be taken back.",
     },
     {
         id: "rules",
@@ -89,6 +96,7 @@ const AdminControllers = () => {
 
             {tab === "sells" && <ServiceCatalogPanel isOwner />}
             {tab === "images" && <SitePicturesPanel />}
+            {tab === "posts" && <AnnouncementsPanel />}
             {tab === "rules" && <OwnerSettingsCard />}
         </AdminLayout>
     );
