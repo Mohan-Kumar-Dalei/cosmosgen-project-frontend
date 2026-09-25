@@ -13,7 +13,7 @@ import NotifyBadge from "../../ui/NotifyBadge";
 import {
     Loader2, AlertCircle, CheckCircle2, Receipt,
     ShieldCheck, Banknote, RefreshCw, X, MapPin, Phone, Wallet, Landmark,
-    Smartphone, HandCoins, Search, Footprints, SearchCheck, XCircle,
+    Smartphone, HandCoins, Search, Footprints, SearchCheck, XCircle, Split,
 } from "lucide-react";
 
 /**
@@ -49,9 +49,24 @@ const AdminPayments = () => {
 
     const sections = useMemo(() => [
         ...(canSeePayments ? [
-            { key: "verify", label: "To verify", icon: ShieldCheck },
+            /*
+              * No "To verify" tab any more.
+              *
+              * It listed every unverified bill regardless of how it was
+              * paid, so the same row appeared there and in Cash or UPI -
+              * two places to do one job, and no way to tell from the
+              * queue which kind of check a row actually needed. Each
+              * method's own tab already shows what is outstanding in it,
+              * and the badges say where the work is.
+              *
+              * Split takes its place. A split is neither cash nor a
+              * gateway payment and it was being swept into UPI, where a
+              * job whose money mostly never touched Razorpay sat in
+              * Razorpay's own list.
+              */
             { key: "cash", label: "Cash", icon: Banknote },
             { key: "upi", label: "UPI", icon: Smartphone },
+            { key: "split", label: "Split", icon: Split },
             { key: "visits", label: "Visits only", icon: Footprints },
         ] : []),
         ...(canSeeWallets ? [
@@ -113,9 +128,9 @@ const AdminPayments = () => {
             // back from Razorpay as "card", not "upi", so filtering on the
             // literal method would quietly drop it.
             const params = { status: "all" };
-            if (section === "verify") params.status = "collected";
-            else if (section === "cash") params.method = "cash";
+            if (section === "cash") params.method = "cash";
             else if (section === "upi") params.method = "online";
+            else if (section === "split") params.method = "split";
             else if (section === "visits") params.kind = "visit";
             else if (section === "history") params.status = statusFilter;
 
@@ -184,9 +199,9 @@ const AdminPayments = () => {
     // leaves a settlement to record under Wallet, and the wallet tab kept
     // that to itself until somebody thought to look.
     const tabCounts = {
-        verify: counts.paymentsToVerify || 0,
         cash: counts.paymentsCash || 0,
         upi: counts.paymentsOnline || 0,
+        split: counts.paymentsSplit || 0,
         visits: counts.paymentsVisits || 0,
         wallet: counts.wallets || 0,
     };
@@ -683,7 +698,9 @@ const PaymentCard = ({ payment: p, canVerify, verifying, onVerify, onOpenBill, o
 
             {check && <GatewayCheck state={check} onRecheck={runCheck} onSettle={onSettle} />}
 
-            {s.commissionDisplay && s.commissionDisplay !== "0.00" && <SettlementBreakdown settlement={s} />}
+            {s.isVisitCharge
+                ? <VisitBreakdown settlement={s} />
+                : s.commissionDisplay && s.commissionDisplay !== "0.00" && <SettlementBreakdown settlement={s} />}
         </div>
     );
 };
@@ -692,13 +709,48 @@ const PaymentCard = ({ payment: p, canVerify, verifying, onVerify, onOpenBill, o
  * The whole arithmetic of one job on one strip: what came in, what the
  * company charged, what the gateway took, and what is genuinely left.
  */
+/**
+ * A wasted trip, which is not a job the company earned anything on.
+ *
+ * The technician travelled out, the customer refused after hearing the
+ * price, and the whole visit charge is his. Running the ordinary strip over
+ * it - paid online, commission, gateway, total earning - told the office a
+ * story about margin on a job that produced none, and the only figure on it
+ * that mattered, the amount, was buried among four that did not.
+ *
+ * The office has exactly one question here: is the number right.
+ */
+const VisitBreakdown = ({ settlement: s }) => (
+    <div className="border-t border-hairline bg-sunken/70 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+            <Figure label="Visit charge" value={s.grossDisplay} strong />
+            <span className="text-ink-soft self-center">
+                Vendor keeps all of it — the company takes nothing on a wasted trip
+            </span>
+            <span className="ml-auto text-[11px] text-ink-faint self-center">
+                Nothing to collect. Just confirm the amount is right.
+            </span>
+        </div>
+    </div>
+);
+
+const METHOD_WORD = {
+    cash: "Cash collected",
+    split: "Paid online to the company",
+    online: "Paid online",
+};
+
 const SettlementBreakdown = ({ settlement: s }) => {
     const inCash = s.collectedIn === "cash";
+    const isSplit = s.collectedIn === "split";
 
     return (
         <div className="border-t border-hairline bg-sunken/70 px-4 py-3">
             <div className="flex flex-wrap items-start gap-x-5 gap-y-2 text-xs">
-                <Figure label={inCash ? "Cash collected" : "Paid online"} value={s.grossDisplay} />
+                {/* On a split this is the company's half only. The vendor's
+                    half was handed over in notes and never reached any of
+                    these figures - it is named beside them instead. */}
+                <Figure label={METHOD_WORD[s.collectedIn] || "Paid online"} value={s.grossDisplay} />
                 <Arrow />
                 <Figure
                     label={"Commission" + (s.commissionPercent != null ? " " + s.commissionPercent + "%" : "")}
@@ -706,17 +758,25 @@ const SettlementBreakdown = ({ settlement: s }) => {
                     note={s.gstInCommissionDisplay !== "0.00" ? "Rs " + s.gstInCommissionDisplay + " of it is tax" : null}
                 />
                 <Arrow />
+                {/* The rate is the office's own setting, and the figure
+                    beside it is Razorpay's real one wherever the gateway has
+                    reported it - so the label only claims to be the rate
+                    while the number is still our estimate. */}
                 <Figure
-                    label={"Razorpay " + s.gatewayPercent + "% + GST"}
+                    label={s.gatewayIsEstimate
+                        ? "Razorpay " + s.gatewayPercent + "% + " + s.gatewayGstPercent + "% GST"
+                        : "Razorpay took"}
                     value={"-" + s.gatewayTotalDisplay}
                     tone="red"
-                    note={s.technicianGatewayIsEstimate ? "when the commission comes in" : null}
+                    note={s.gatewayIsEstimate ? "estimate, until the commission comes in" : null}
                 />
                 <Arrow />
                 <Figure label="Total earning" value={s.netEarningDisplay} tone="green" strong />
 
                 <span className="ml-auto text-[11px] text-ink-faint self-center">
-                    Vendor's share Rs {s.technicianShareDisplay}
+                    {isSplit
+                        ? "Vendor took Rs " + s.cashAtDoorDisplay + " in cash at the door"
+                        : "Vendor's share Rs " + s.technicianShareDisplay}
                 </span>
             </div>
 
@@ -733,7 +793,9 @@ const SettlementBreakdown = ({ settlement: s }) => {
                 <span className="text-ink-faint">
                     {inCash
                         ? "Cash job — the fee applies to the commission the vendor sends back"
-                        : "Online job — the fee already came off the customer's payment"}
+                        : isSplit
+                            ? "Split job — the fee landed on the company's half only, which is the point of a split"
+                            : "Online job — the fee already came off the customer's payment"}
                 </span>
             </div>
         </div>
@@ -887,7 +949,7 @@ const InvoiceModal = ({ payment, onClose }) => {
                             <div>
                                 <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-wider mb-2">What the company keeps</p>
                                 <div className="rounded-xl border border-hairline overflow-hidden text-sm">
-                                    <Line label={isCash ? "Cash collected" : "Paid online"} value={s.grossDisplay} />
+                                    <Line label={METHOD_WORD[s.collectedIn] || "Paid online"} value={s.grossDisplay} />
                                     <Line
                                         label={"Company commission" + (s.commissionPercent != null ? " (" + s.commissionPercent + "%)" : "")}
                                         value={s.commissionDisplay}
@@ -899,9 +961,19 @@ const InvoiceModal = ({ payment, onClose }) => {
                                             muted
                                         />
                                     )}
-                                    <Line label="Vendor's share" value={s.technicianShareDisplay} muted />
                                     <Line
-                                        label={"Razorpay fee (" + s.gatewayPercent + "% + 18% GST)"}
+                                        label={s.collectedIn === "split"
+                                            ? "Vendor took in cash at the door"
+                                            : "Vendor's share"}
+                                        value={s.collectedIn === "split"
+                                            ? s.cashAtDoorDisplay
+                                            : s.technicianShareDisplay}
+                                        muted
+                                    />
+                                    <Line
+                                        label={s.gatewayIsEstimate
+                                            ? "Razorpay fee (" + s.gatewayPercent + "% + " + s.gatewayGstPercent + "% GST, estimated)"
+                                            : "Razorpay fee (what the gateway actually took)"}
                                         value={"-" + s.gatewayTotalDisplay}
                                         tone="red"
                                     />
