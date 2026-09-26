@@ -36,6 +36,7 @@ const BLANK = {
     imageUrl: "",
     action: { kind: "none", serviceKey: "", url: "" },
     order: 0,
+    offerServiceKeys: [],
     startsAt: "",
     endsAt: "",
     isActive: true,
@@ -248,6 +249,7 @@ const toForm = (row) => ({
         url: row.action?.url || "",
     },
     order: row.order || 0,
+    offerServiceKeys: row.offerServiceKeys || [],
     startsAt: forInput(row.startsAt),
     endsAt: forInput(row.endsAt),
     isActive: row.isActive !== false,
@@ -454,6 +456,46 @@ const Editor = ({ form, setForm, services, saving, onSave, onClose }) => {
                         )}
                     </div>
 
+                    {/*
+                      * Which trades an offer covers.
+                      *
+                      * A notice with any of these ticked also appears on those
+                      * services' own pages in the app, which is where somebody
+                      * is actually about to book. Leave them all unticked and
+                      * it is simply an announcement and lives in the bell.
+                      */}
+                    <div>
+                        <label className="cg-label">This is an offer on…</label>
+                        <p className="cg-sub text-xs mb-2">
+                            Tick the trades it applies to. Leave empty if it is just an
+                            announcement.
+                        </p>
+
+                        <div className="flex flex-wrap gap-1.5">
+                            {services.map((svc) => {
+                                const on = form.offerServiceKeys.includes(svc.key);
+
+                                return (
+                                    <button
+                                        key={svc.key}
+                                        type="button"
+                                        onClick={() => set({
+                                            offerServiceKeys: on
+                                                ? form.offerServiceKeys.filter((k) => k !== svc.key)
+                                                : [...form.offerServiceKeys, svc.key],
+                                        })}
+                                        className={"px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-colors "
+                                            + (on
+                                                ? "bg-ink text-white border-ink"
+                                                : "bg-white text-ink-soft border-hairline hover:border-hairline-strong")}
+                                    >
+                                        {svc.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     {/* ---- when it runs ---- */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -466,7 +508,7 @@ const Editor = ({ form, setForm, services, saving, onSave, onClose }) => {
                             />
                         </div>
                         <div>
-                            <label className="cg-label">Until (optional)</label>
+                            <label className="cg-label">Until — an offer expires here (optional)</label>
                             <input
                                 type="date"
                                 value={form.endsAt}
