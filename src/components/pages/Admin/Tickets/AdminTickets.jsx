@@ -644,7 +644,45 @@ const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
                             <div className="mb-4">
                                 <p className="text-xs font-semibold text-ink-faint uppercase mb-1">Service</p>
                                 <p className="text-sm text-ink">{ticket.serviceLabel}</p>
-                                {ticket.selectedIssues?.length > 0 && (
+
+                                {/*
+                                  * The faults under the machine each came off.
+                                  *
+                                  * A visit can carry two boxes, and a row of
+                                  * badges reading "Not cooling properly, Not
+                                  * cooling properly" told the office nothing
+                                  * about which was which - that is the ticket
+                                  * Mohan sent back. The booking now keeps the
+                                  * grouping the customer made and this reads
+                                  * it.
+                                  *
+                                  * A ticket booked on WhatsApp, or by an app
+                                  * that predates this, carries no grouping. It
+                                  * falls through to the flat badges below,
+                                  * because the alternative is an old ticket
+                                  * showing no faults at all.
+                                  */}
+                                {ticket.selectedIssueGroups?.length > 0 ? (
+                                    <div className="mt-3 space-y-3">
+                                        {ticket.selectedIssueGroups.map((group, g) => (
+                                            <div key={group.applianceKey || g}>
+                                                <p className="text-xs font-semibold text-ink-soft mb-1.5">
+                                                    {group.applianceLabel}
+                                                </p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(group.issues || []).map((issue, i) => (
+                                                        <span
+                                                            key={i}
+                                                            className="text-xs bg-sunken text-ink px-2 py-1 rounded-full"
+                                                        >
+                                                            {issue}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : ticket.selectedIssues?.length > 0 ? (
                                     <div className="flex flex-wrap gap-1.5 mt-2">
                                         {ticket.selectedIssues.map((issue, i) => (
                                             <span key={i} className="text-xs bg-sunken text-ink px-2 py-1 rounded-full">
@@ -652,7 +690,7 @@ const TicketDetailModal = ({ ticketId, onClose, onUpdated }) => {
                                             </span>
                                         ))}
                                     </div>
-                                )}
+                                ) : null}
                                 {ticket.problemDescription && (
                                     <p className="text-sm text-ink-soft mt-2">{ticket.problemDescription}</p>
                                 )}
